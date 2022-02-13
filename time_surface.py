@@ -413,7 +413,7 @@ def draw3DBarGraph(image, number, display=True):
     plt.close()
 
 if __name__ == "__main__":
-    if not os.path.isdir("./Output"):
+    if not os.path.isdir("../Output"):
         os.mkdir("../Output")
 
     image = read_aedat4(aedat4_file, time_step=33000, processAll=False, factor=10)
