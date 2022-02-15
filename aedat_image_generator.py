@@ -41,6 +41,9 @@ def read_annotation(filename: str) -> np.ndarray:
     
     return df.columns, df
 
+def read_pickle(filename: str):
+    return pd.read_pickle(filename)
+
 ########################################################################################################################################
 #
 # Reading the AEDAT4 Files and outputting image with 1b1c (1 bit 1 channel) format
@@ -62,34 +65,26 @@ def read_annotation(filename: str) -> np.ndarray:
 def read_aedat4_1b1c(filename: str, time_step=66000, processAll=True, factor=1) -> np.ndarray:
     data = aedat.Decoder(filename)
     for packet in data:
-        if processAll:
-            total_events = len(packet['events'])
-        else:
-            total_events = time_step*factor
-        frames = ceil(total_events/time_step)
+        total_events = len(packet['events'])
+        frames = ceil(packet['events']['t'][-1]/time_step)
         image = np.zeros((frames, HEIGHT, WIDTH), dtype=np.ubyte)
         #image = np.zeros((frames, HEIGHT, WIDTH), dtype=np.uint32)
 
         frame = 0
         accumulated_time = 0
-        intensity = 1
         for i in tqdm(range(0, total_events, dt), desc='processing events'):
-            #if frame > 0 and accumulated_time == 0:
-            #    image[frame] = image[frame-1]
-            #image[frame][packet['events']['y'][i]][packet['events']['x'][i]] = packet['events']['on'][i]*255
-            #image[frame][packet['events']['y'][i]][packet['events']['x'][i]] = packet['events']['on'][i]* (intensity // 128) # use 128 instead of 255
-            if intensity // 128 >= 255:
-                image[frame][packet['events']['y'][i]][packet['events']['x'][i]] = 255
-            else:
-                image[frame][packet['events']['y'][i]][packet['events']['x'][i]] = (intensity // 128) # use 128 instead of 255 for scaling
+            y = packet['events']['y'][i]
+            x = packet['events']['x'][i]
+            image[frame][y][x] = 255
 
-            if accumulated_time < time_step:
-                accumulated_time += dt
-                intensity += 1
+            if i == 0:
+                accumulated_time = 0
             else:
+                accumulated_time += (packet['events']['t'][i] - packet['events']['t'][i-1])
+            
+            if accumulated_time >= time_step:
                 frame += 1
                 accumulated_time = 0
-                intensity = 1
 
     return image
 
@@ -117,24 +112,26 @@ def read_aedat4_1b1c(filename: str, time_step=66000, processAll=True, factor=1) 
 def read_aedat4_1b2c(filename: str, time_step=66000, processAll=True, factor=1) -> np.ndarray:
     data = aedat.Decoder(filename)
     for packet in data:
-        if processAll:
-            total_events = len(packet['events'])
-        else:
-            total_events = time_step*factor
-        frames = ceil(total_events/time_step)
+        total_events = len(packet['events'])
+        frames = ceil(packet['events']['t'][-1]/time_step)
         image = np.zeros((frames, HEIGHT, WIDTH, CHANNEL), dtype=np.ubyte)
 
         frame = 0
         accumulated_time = 0
         for i in tqdm(range(0, total_events, dt), desc='processing events'):
-            #if frame > 0 and accumulated_time == 0:
-            #    image[frame] = image[frame-1]
-            image[frame][packet['events']['y'][i]][packet['events']['x'][i]][0] = packet['events']['on'][i]*255     # ON Channel
-            image[frame][packet['events']['y'][i]][packet['events']['x'][i]][1] = (~packet['events']['on'][i])*255     # OFF Channel
-
-            if accumulated_time < time_step:
-                accumulated_time += dt
+            y = packet['events']['y'][i]
+            x = packet['events']['x'][i]
+            if packet['events']['on'][i]:
+                image[frame][y][x][0] = 255     # ON Channel
             else:
+                image[frame][y][x][1] = 255     # OFF Channel
+
+            if i == 0:
+                accumulated_time = 0
+            else:
+                accumulated_time += (packet['events']['t'][i] - packet['events']['t'][i-1])
+            
+            if accumulated_time >= time_step:
                 frame += 1
                 accumulated_time = 0
 
@@ -151,10 +148,11 @@ def save_image(mode: str, folder_name: str, image: np.ndarray) -> None:
         os.mkdir(location)
 
     # Store the images from image np array
-    img_no = 0
-    for img in image:
-        cv2.imwrite(location + str(img_no) + '.jpg', img)
-        img_no += 1
+    #img_no = 0
+    for i, img in tqdm(enumerate(image)):
+        cv2.imwrite(location + str(i) + '.jpg', img)
+        #cv2.imwrite(location + str(img_no) + '.jpg', img)
+        #img_no += 1
 
 ########################################################################################################################################
 #
@@ -199,6 +197,7 @@ def display_video(mode: str, folder_name: str) -> None:
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
+    
     recordings = glob.glob(aedat4_file)
 
     for m in mode:
@@ -211,4 +210,7 @@ if __name__ == '__main__':
         folder_name = filename.split('.')[0] + '/'
         save_image(mode[1], folder_name, current_events)
         save_video(mode[1], folder_name, filename.split('.')[0])
-        display_video(mode[1], folder_name)
+        #display_video(mode[0], folder_name)
+    
+    #df = read_pickle("../GT_ON_OFF_data_w_augmentation/GT_train_42x42_20190924-meta-data.pkl")
+    #print(df.head(20))
