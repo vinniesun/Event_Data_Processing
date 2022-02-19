@@ -43,185 +43,114 @@ SOBEL_Y = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
 radii3 = [12, 13, 14, 20, 24, 28, 34, 37, 43, 46, 52, 56, 60, 66, 67, 68]
 radii4 = [3, 4, 5, 11, 15, 19, 25, 27, 35, 36, 44, 45, 53, 55, 61, 65, 69, 75, 76, 77]
 
-def medianFilter(data, filter_size):
-    #filtered = cv2.medianBlur(rawIm, 3) # Ksize aperture linear must be odd and greater than 1 ie 3, 5, 7... 
+def medianFilter(rawIm):
+    filtered = cv2.medianBlur(rawIm, 3) # Ksize aperture linear must be odd and greater than 1 ie 3, 5, 7... 
     
-    #return filtered
-    temp = []
-    indexer = filter_size // 2
-    data_final = []
-    data_final = np.zeros((len(data),len(data[0])))
-    for i in range(len(data)):
-        for j in range(len(data[0])):
-            for z in range(filter_size):
-                if i + z - indexer < 0 or i + z - indexer > len(data) - 1:
-                    for c in range(filter_size):
-                        temp.append(0)
-                else:
-                    if j + z - indexer < 0 or j + indexer > len(data[0]) - 1:
-                        temp.append(0)
-                    else:
-                        for k in range(filter_size):
-                            temp.append(data[i + z - indexer][j + k - indexer])
-
-            temp.sort()
-            data_final[i][j] = temp[len(temp) // 2]
-            temp = []
-    return data_final
+    return filtered
 
 def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, eventSpecified=False, eventNo=None) -> np.ndarray:
     data = aedat.Decoder(filename)
     for packet in data:
+        #if processAll:
+        #    total_events = len(packet['events'])
+        #else:
+        #    total_events = time_step*factor
+        #frames = ceil(total_events/time_step)
+        #image = np.zeros((frames, HEIGHT, WIDTH), dtype=np.ubyte)
         total_events = len(packet['events'])
-        noFrames = ceil(ceil(packet['events']['t'][-1]/time_step))
-        sae = np.zeros((HEIGHT, WIDTH, 2), dtype=np.int64)
-        ebbi_image = np.zeros((noFrames, HEIGHT, WIDTH, 2), dtype=np.uint8)
-
-        last_event = 0
-        
-        pastOnEvents = []
-        pastOffEvents = []
-
-        threshold_val = time_step
+        frames = ceil(packet['events']['t'][-1]/time_step)
+        image = np.zeros((frames, HEIGHT, WIDTH, 2), dtype=np.uint32)
 
         frame = 0
         accumulated_time = 0
-
+        last_event = 0
+        
         for i in tqdm(range(0, total_events, dt), desc='processing events'):
             y = packet['events']['y'][i]
             x = packet['events']['x'][i]
             pol = packet['events']['on'][i] # packet['events']['on'] = 1 means it's ON, packet['event']['on'] = 0 means it's OFF
 
-            prev_state = sae[y][x][int(pol)] # This is for ArcStar
-            prev_state_inv = sae[y][x][int(not pol)] # This is for ArcStar
+            prev_state = image[frame][y][x][int(pol)] # This is for ArcStar
+            prev_state_inv = image[frame][y][x][int(not pol)] # This is for ArcStar
 
-            deltaT = int(packet['events']['t'][i] - last_event)
+            image[frame][y][x][int(pol)] = packet['events']['t'][i]
+            image[frame][:, :, int(pol)] = image[frame][:, :, int(pol)] - last_event # Clip all values that are negative to zero
+            image[frame][image[frame] < 0] = 0
 
-            sae[:, :, int(pol)] -= deltaT
-            sae[y][x][int(pol)] = threshold_val
-            temp = sae[:, :, int(pol)]
-            temp[temp < 0] = 0
-            sae[:, :, int(pol)] = temp
-
-            ebbi_image[frame][y][x][int(pol)] = 255
-            
-            if pol:
-                if i >= time_step:
-                    eventRemoved = pastOnEvents[0]
-                    pastOnEvents.pop(0)
-                    ebbi_image[frame][eventRemoved[0]][eventRemoved[1]][int(pol)] = 0
-                    pastOnEvents.append((y, x))
-                else:
-                    pastOnEvents.append((y, x))
-            else:
-                if i >= time_step:
-                    eventRemoved = pastOffEvents[0]
-                    pastOffEvents.pop(0)
-                    ebbi_image[frame][eventRemoved[0]][eventRemoved[1]][int(pol)] = 0
-                    pastOffEvents.append((y, x))
-                else:
-                    pastOffEvents.append((y, x))
-
-            image = sae[:, :, int(pol)]
             if eventSpecified and i == eventNo:
-            #if isCornerEFast(image, x, y, int(pol)) and not isCornerArcStar(image, prev_state, prev_state_inv, x, y, int(pol)) and i >= 5000:
-                #filtered = medianFilter(image, 3)
-                #image = filtered
+            #if frame == factor-1 and i%time_step == eventNo:
+                drawHeatMapWhole(image[frame][:, :, int(pol)], i, eventSpecified, name="Full SAE" + str(time_step) + "us")
 
-                drawHeatMapWhole(ebbi_image[frame][:, :, int(pol)], i, eventSpecified, name="EBBI Image" + str(time_step) + "us")
-
-                drawHeatMapWhole(image, i, eventSpecified, name="Full SAE" + str(time_step) + "us")
-
-                noCorner, output, cornerLocation = openCVHarrisCornerDet(ebbi_image[frame][:, :, int(pol)], x, y, int(pol))
-                #noCorner, output, cornerLocation = customHarrisCornerDet(ebbi_image[frame][:, :, int(pol)], x, y, int(pol))
-                drawHeatMapWhole(np.zeros((output.shape[0], output.shape[1])), i, eventSpecified, name="All Corners " + str(time_step) + "us", symbol="x", cornerLocation=cornerLocation)
+                noCorner, output, cornerLocation = openCVHarrisCornerDet(image[frame], x, y, int(pol))
+                #noCorner, output, cornerLocation = customHarrisCornerDet(image[frame], x, y, int(pol))
+                drawHeatMapWhole(output, i, eventSpecified, name="All Corners " + str(time_step) + "us")
                 noRow, noCol = int((sqrt(noCorner))), ceil(noCorner / int(sqrt(noCorner)))
 
                 # Plot Harris Response
-                fig, ax = plt.subplots(noRow, noCol,figsize=(16, 16))
+                fig, ax = plt.subplots(noRow, noCol,figsize=(12, 9))
                 plt.tight_layout()
                 for j, (row, col) in enumerate(cornerLocation):
-                    temp = crop(image, col, row, 9)
+                    temp = crop(image[frame][:, :, int(pol)], col, row, 9)
                     ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner No. " + str(j))
-                plt.savefig("../Output/" + str(time_step) + "us 2D Harris Corner of Event " + str(i) + ".jpg", dpi=300)
+                plt.savefig("../Output/" + str(time_step) + "us 2D Harris Corner of Event " + str(eventNo) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
 
-                fig = plt.figure(figsize=(16, 16))
+                fig = plt.figure(figsize=(12, 9))
                 plt.tight_layout()
                 for j, (row, col) in enumerate(cornerLocation):
                     ax = fig.add_subplot(noRow, noCol, j+1, projection='3d')
-                    temp = crop(image, col, row, 9)
+                    temp = crop(image[frame][:, :, int(pol)], col, row, 9)
                     ax = draw3DBarGraphSub(temp, i, subplot=ax, title="Corner No. " + str(j))
-                plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of Harris Corner of Event " + str(i) + ".jpg", dpi=300)
+                plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of Harris Corner of Event " + str(eventNo) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
                 
                 # Plot eFast Response
-                fig, ax = plt.subplots(1, 1,figsize=(12, 9))
+                fig, ax = plt.subplots(noRow, noCol,figsize=(12, 9))
                 plt.tight_layout()
-                if isCornerEFast(image, x, y, int(pol)):
-                    temp = crop(image, x, y, 9)
-                    ax = drawHeatMapSub(temp, i, subplot=ax, title="Corner")
-                plt.savefig("../Output/" + str(time_step) + "us 2D eFast Corner of Event " + str(i) + ".jpg", dpi=300)
+                for j, (row, col) in enumerate(cornerLocation):
+                    if isCornerEFast(image[frame], col, row, int(pol)):
+                        temp = crop(image[frame][:, :, int(pol)], col, row, 9)
+                        ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner No. " + str(j))
+                plt.savefig("../Output/" + str(time_step) + "us 2D eFast Corner of Event " + str(eventNo) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
 
                 fig = plt.figure(figsize=(12, 9))
                 plt.tight_layout()
-                ax = fig.add_subplot(1, 1, 1, projection='3d')
-                if isCornerEFast(image, x, y, int(pol)):
-                    temp = crop(image, x, y, 9)
-                    ax = draw3DBarGraphSub(temp, i, subplot=ax, title="Corner")
-                plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of eFast Corner of Event " + str(i) + ".jpg", dpi=300)
+                for j, (row, col) in enumerate(cornerLocation):
+                    ax = fig.add_subplot(noRow, noCol, j+1, projection='3d')
+                    if isCornerEFast(image[frame], col, row, int(pol)):
+                        temp = crop(image[frame][:, :, int(pol)], col, row, 9)
+                        ax = draw3DBarGraphSub(temp, i, subplot=ax, title="Corner No. " + str(j))
+                plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of eFast Corner of Event " + str(eventNo) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
 
                 # Plot ArcStar Response
-                #fig, ax = plt.subplots(noRow, noCol,figsize=(12, 9))
-                #plt.tight_layout()
-                #for j, (row, col) in enumerate(cornerLocation):
-                #    if isCornerArcStar(image, prev_state, prev_state_inv, col, row, int(pol)):
-                #        temp = crop(image, col, row, 9)
-                #        ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner No. " + str(j))
-                #plt.savefig("../Output/" + str(time_step) + "us 2D ArcStar Corner of Event " + str(eventNo) + ".jpg", dpi=300)
-                #plt.show()
-                #plt.close(fig)
-
-                #fig = plt.figure(figsize=(12, 9))
-                #plt.tight_layout()
-                #for j, (row, col) in enumerate(cornerLocation):
-                #    ax = fig.add_subplot(noRow, noCol, j+1, projection='3d')
-                #    if isCornerArcStar(image, prev_state, prev_state_inv, col, row, int(pol)):
-                #        temp = crop(image, col, row, 9)
-                #        ax = draw3DBarGraphSub(temp, i, subplot=ax, title="Corner No. " + str(j))
-                #plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of ArcStar Corner of Event " + str(eventNo) + ".jpg", dpi=300)
-                #plt.show()
-                #plt.close(fig)
-
-                # Plot ArcStar Response
-                fig, ax = plt.subplots(1, 1,figsize=(12, 9))
+                fig, ax = plt.subplots(noRow, noCol,figsize=(12, 9))
                 plt.tight_layout()
-                if isCornerArcStar(image, prev_state, prev_state_inv, x, y, int(pol)):
-                    temp = crop(image, x, y, 9)
-                    ax = drawHeatMapSub(temp, i, subplot=ax, title="Corner")
-                plt.savefig("../Output/" + str(time_step) + "us 2D ArcStar Corner of Event " + str(i) + ".jpg", dpi=300)
+                for j, (row, col) in enumerate(cornerLocation):
+                    if isCornerArcStar(image[frame], prev_state, prev_state_inv, col, row, int(pol)):
+                        temp = crop(image[frame][:, :, int(pol)], col, row, 9)
+                        ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner No. " + str(j))
+                plt.savefig("../Output/" + str(time_step) + "us 2D ArcStar Corner of Event " + str(eventNo) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
 
                 fig = plt.figure(figsize=(12, 9))
                 plt.tight_layout()
-                ax = fig.add_subplot(1, 1, 1, projection='3d')
-                if isCornerArcStar(image, prev_state, prev_state_inv, x, y, int(pol)):
-                    temp = crop(image, x, y, 9)
-                    ax = draw3DBarGraphSub(temp, i, subplot=ax, title="Corner")
-                plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of ArcStar Corner of Event " + str(i) + ".jpg", dpi=300)
+                for j, (row, col) in enumerate(cornerLocation):
+                    ax = fig.add_subplot(noRow, noCol, j+1, projection='3d')
+                    if isCornerArcStar(image[frame], prev_state, prev_state_inv, col, row, int(pol)):
+                        temp = crop(image[frame][:, :, int(pol)], col, row, 9)
+                        ax = draw3DBarGraphSub(temp, i, subplot=ax, title="Corner No. " + str(j))
+                plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of ArcStar Corner of Event " + str(eventNo) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
 
-                #break
-
-            last_event = packet['events']['t'][i]
+                break
 
             if i == 0:
                 accumulated_time = 0
@@ -231,7 +160,9 @@ def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, event
             if accumulated_time >= time_step:
                 frame += 1
                 accumulated_time = 0
-                ebbi_image[frame] = ebbi_image[frame-1]
+                image[frame] = image[frame-1]
+            
+            last_event = packet['events']['t'][i]
 
     return image
 
@@ -345,7 +276,7 @@ def customHarrisCornerDet(image, centerX, centerY, pol, pixelSize=9, k=0.04):
     if (centerX < cs or centerX >= WIDTH-cs or centerY < cs or centerY >= HEIGHT-cs):
         return False, None
 
-    check = image
+    check = image[:, :, pol]
     noOfCorners, output, cornerLocation = None, np.zeros((check.shape[0], check.shape[1])), [None]
 
     grad_x = gradient(check, SOBEL_X)
@@ -367,6 +298,37 @@ def customHarrisCornerDet(image, centerX, centerY, pol, pixelSize=9, k=0.04):
 
     return noOfCorners, output, cornerLocation
 
+    """
+    isCorner = False
+    cropped = crop(image[:, :, pol], centerX, centerY, pixelSize)
+
+    grad_x = gradient(cropped, SOBEL_X)
+    grad_y = gradient(cropped, SOBEL_Y)
+
+    Ixx = ndimage.gaussian_filter(grad_x**2, sigma=1)
+    Iyy = ndimage.gaussian_filter(grad_y**2, sigma=1)
+    Ixy = ndimage.gaussian_filter(grad_x*grad_y, sigma=1)
+
+    detA = Ixx * Iyy - Ixy**2
+    traceA = Ixx + Iyy
+    harris = detA - k*traceA**2
+
+    output = cropped.copy()
+    
+    #for row, response in enumerate(harris):
+    #    for col, r in enumerate(response):
+    #        if r > 0:
+    #            isCorner = True
+    #            output[row][col] = cropped[row][col]
+    #        else:
+    #            output[row][col] = cropped[row][col]
+    
+    if harris[pixelSize // 2][pixelSize // 2] > 0:
+        isCorner = True
+
+    return isCorner, output
+    """
+
 def openCVHarrisCornerDet(image, centerX, centerY, pol, pixelSize=9, k=0.04):
     # neighbourhood size = 2
     # sobel operator aperture param = 8
@@ -377,7 +339,7 @@ def openCVHarrisCornerDet(image, centerX, centerY, pol, pixelSize=9, k=0.04):
     if (centerX < cs or centerX >= WIDTH-cs or centerY < cs or centerY >= HEIGHT-cs):
         return False, None, None
 
-    check = image
+    check = image[:, :, pol]
     noOfCorners, output, cornerLocation = None, np.zeros((check.shape[0], check.shape[1])), [None]
     #norm_image = check * (255/image.max())
     #norm_image = norm_image.astype(np.uint8)
@@ -385,13 +347,33 @@ def openCVHarrisCornerDet(image, centerX, centerY, pol, pixelSize=9, k=0.04):
     harris = cv2.cornerHarris(norm_image, 2, 7, k)
     dst = cv2.dilate(harris, None)
 
-    noOfCorners = np.count_nonzero(dst > 0.6*dst.max())
-    cornerLocation = np.argwhere(dst > 0.6*dst.max()) # output is row*col of index
-    output[dst > 0.6*dst.max()] = [255]
+    noOfCorners = np.count_nonzero(dst > 0.99*dst.max())
+    cornerLocation = np.argwhere(dst > 0.99*dst.max()) # output is row*col of index
+    output[dst > 0.4*dst.max()] = [255]
 
     # output to show:
     #   no of corners (for subplot division), output corner image, list of corner locations, 
     return noOfCorners, output, cornerLocation
+
+    """
+    isCorner = False
+    check = crop(image[:, :, pol], centerX, centerY, pixelSize)
+    
+    output = copy.deepcopy(check)
+    norm = np.linalg.norm(check)
+    check = ((check/norm) * 255).astype(np.uint8) # Normalise image
+    harris = cv2.cornerHarris(check, 2, 7, k)
+    dst = cv2.dilate(harris, None)
+    #threshold = np.argwhere(dst > 0.1*dst.max()) # Check if there are any strong corner cases
+    #if len(threshold) > 0:
+    #    isCorner = True
+    #output[dst > 0.1*dst.max()] = [255]
+    threshold = 0.1*dst.max()
+    if dst[pixelSize // 2][pixelSize // 2] >= threshold:
+        isCorner = True
+
+    return isCorner, output, dst
+    """
 
 # Size can be either 5 or 10
 def crop(image, startX, startY, size):
@@ -407,7 +389,7 @@ def getMaxIndex(image):
 def isCornerEFast(img, centerX, centerY, pol):
     found = False
     smallCount, bigCount = 0, 0
-    image = img
+    image = img[:, :, pol]
 
     # Check if it's too close to the border of the SAE
     max_scale = 1
@@ -486,10 +468,10 @@ def isCornerArcStar(img, prev_state, prev_state_inv, centerX, centerY, pol, filt
     t_last_inv = prev_state_inv
 
     # Filter out redundant spikes, e.g. spikes of the same polarity that's fired off consecutively in short period
-    if ((img[centerY][centerX] > t_last + filter_threshold) or (t_last_inv > t_last)):
-        t_last = img[centerY][centerX]
+    if ((img[centerY][centerX][pol] > t_last + filter_threshold) or (t_last_inv > t_last)):
+        t_last = img[centerY][centerX][pol]
     else:
-        t_last = img[centerY][centerX]
+        t_last = img[centerY][centerX][pol]
         return False
 
     # Check if it's too close to the border of the SAE
@@ -499,7 +481,7 @@ def isCornerArcStar(img, prev_state, prev_state_inv, centerX, centerY, pol, filt
         return False
 
     found = False
-    image = img
+    image = img[:, :, pol]
     segment_new_min_t = image[centerY + SMALL_CIRCLE[0][1]][centerX + SMALL_CIRCLE[0][0]]
     arc_left_idx, arc_right_idx = 0, 0 # this is the CCW & CW index in the original paper
     
@@ -636,18 +618,10 @@ def drawHeatMapSub(image, number, display=True, name=None, subplot=None, title=N
     subplot.imshow(image, cmap='coolwarm')
     return subplot
 
-def drawHeatMapWhole(image, number, display=True, name=None, subplot=None, title=None, symbol=None, cornerLocation=None):
+def drawHeatMapWhole(image, number, display=True, name=None, subplot=None, title=None):
     fig = plt.figure()
 
     plt.imshow(image, cmap='coolwarm')
-
-    if symbol:
-        row, col = [], []
-        for i, j in cornerLocation:
-            row.append(j)
-            col.append(i)
-        plt.scatter(row, col, color='r', marker=symbol)
-
     m = cm.ScalarMappable(cmap=cm.coolwarm)
     m.set_array(image)
     plt.colorbar(m)
@@ -740,5 +714,25 @@ if __name__ == "__main__":
     if not os.path.isdir("../Output"):
         os.mkdir("../Output")
 
-    image = read_aedat4(aedat4_file, time_step=33000, processAll=False, eventSpecified=True, eventNo=5147) # 33000ms interval, @event=54000, we get arc* response, no for eFast
-    # 5000ms interval, @eventNo 44000, eFast response, no arc* response
+    image = read_aedat4(aedat4_file, time_step=33000, processAll=False, eventSpecified=True, eventNo=6000)
+    """
+    image = image[-1]
+    filtered = medianFilter(image) # apply median filter to image
+
+    # With Filtering
+    corner_filtered_output, filtered_dst = harrisCornerDet(filtered) # Get the Harris Corner Detected
+    heatmap_filtered = cv2.applyColorMap(corner_filtered_output, cv2.COLORMAP_AUTUMN) # Get the Heatmap of the Corner Detected
+
+    # Without Filtering
+    corner_output, dst = harrisCornerDet(image)
+    heatmap = cv2.applyColorMap(corner_output, cv2.COLORMAP_AUTUMN)
+
+    # Get the index for the largest value i.e. latest event
+    maxIndices = getMaxIndex(filtered)
+    for i, (row, col) in tqdm(enumerate(maxIndices), desc="generate crops"):
+        cropped = crop(image, col, row, 9) # 9 just like the Mueggler paper
+        # Draw the result
+        if isCorner(cropped):
+            drawHeatMap(cropped, i, False)
+            draw3DBarGraph(cropped, i, False)
+    """
