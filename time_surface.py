@@ -1,75 +1,17 @@
-from mpl_toolkits import mplot3d
-import matplotlib.cm as cm
-
-from math import ceil, pi, exp, sqrt
+from math import ceil, sqrt
 import aedat
-import numpy as np
-
-import cv2
 import os
-import glob
-import pandas as pd
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-
-from scipy import signal, ndimage
-from skimage.feature import corner_peaks
-import copy
-
-from collections import deque
+from efast import *
+from arcstar import *
+from util import *
+from harris_detector import *
+from plot_tools import *
 
 aedat4_file = '../EBBINNOT_AEDAT4/Recording/20180711_Site1_3pm_12mm_01.aedat4'
-image_path = '../images/corner/'
 dt = 1
-WIDTH = 240
-HEIGHT = 180
 
-# Circle Param
-SMALL_CIRCLE = [[0, 3], [1, 3], [2, 2], [3, 1],
-                [3, 0], [3, -1], [2, -2], [1, -3],
-                [0, -3], [-1, -3], [-2, -2], [-3, -1],
-                [-3, 0], [-3, 1], [-2, 2], [-1, 3]]
-BIG_CIRCLE = [[0, 4], [1, 4], [2, 3], [3, 2],
-              [4, 1], [4, 0], [4, -1], [3, -2],
-              [2, -3], [1, -4], [0, -4], [-1, -4],
-              [-2, -3], [-3, -2], [-4, -1], [-4, 0],
-              [-4, 1], [-3, 2], [-2, 3], [-1, 4]]
-
-# Sobel Operators
-SOBEL_X = np.array([[-1, 0, 1],[-2, 0, 2],[-1, 0, 1]])
-SOBEL_Y = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-
-# flattened pixel number
-radii3 = [12, 13, 14, 20, 24, 28, 34, 37, 43, 46, 52, 56, 60, 66, 67, 68]
-radii4 = [3, 4, 5, 11, 15, 19, 25, 27, 35, 36, 44, 45, 53, 55, 61, 65, 69, 75, 76, 77]
-
-def medianFilter(data, filter_size):
-    #filtered = cv2.medianBlur(rawIm, 3) # Ksize aperture linear must be odd and greater than 1 ie 3, 5, 7... 
-    
-    #return filtered
-    temp = []
-    indexer = filter_size // 2
-    data_final = []
-    data_final = np.zeros((len(data),len(data[0])))
-    for i in range(len(data)):
-        for j in range(len(data[0])):
-            for z in range(filter_size):
-                if i + z - indexer < 0 or i + z - indexer > len(data) - 1:
-                    for c in range(filter_size):
-                        temp.append(0)
-                else:
-                    if j + z - indexer < 0 or j + indexer > len(data[0]) - 1:
-                        temp.append(0)
-                    else:
-                        for k in range(filter_size):
-                            temp.append(data[i + z - indexer][j + k - indexer])
-
-            temp.sort()
-            data_final[i][j] = temp[len(temp) // 2]
-            temp = []
-    return data_final
-
-def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, eventSpecified=False, eventNo=None) -> np.ndarray:
+def read_aedat4(filename:str, time_step:int=66000, processAll:bool=True, factor:int=1, eventSpecified:bool=False, eventNo:int=None) -> None:
     data = aedat.Decoder(filename)
     for packet in data:
         total_events = len(packet['events'])
@@ -128,9 +70,11 @@ def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, event
                 #filtered = medianFilter(image, 3)
                 #image = filtered
 
+                # Draw the Current EBBI Image.
                 drawHeatMapWhole(ebbi_image[frame][:, :, int(pol)], i, eventSpecified, name="EBBI Image" + str(time_step) + "us")
 
-                drawHeatMapWhole(image, i, eventSpecified, name="Full SAE" + str(time_step) + "us")
+                # Draw the Current SAE
+                drawHeatMapWhole(image, i, eventSpecified, name="SAE" + str(time_step) + "us")
 
                 noCorner, output, cornerLocation = openCVHarrisCornerDet(ebbi_image[frame][:, :, int(pol)], x, y, int(pol))
                 #noCorner, output, cornerLocation = customHarrisCornerDet(ebbi_image[frame][:, :, int(pol)], x, y, int(pol))
@@ -142,11 +86,12 @@ def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, event
                 plt.tight_layout()
                 for j, (row, col) in enumerate(cornerLocation):
                     temp = crop(image, col, row, 9)
-                    ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner No. " + str(j))
-                plt.savefig("../Output/" + str(time_step) + "us 2D Harris Corner of Event " + str(i) + ".jpg", dpi=300)
+                    ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner " + str(row) + ", " + str(col))
+                plt.savefig("../Output/" + str(time_step) + "us 2D Harris, Corners detected - " + str(noCorner) + ", of Event " + str(i) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
 
+                """
                 fig = plt.figure(figsize=(16, 16))
                 plt.tight_layout()
                 for j, (row, col) in enumerate(cornerLocation):
@@ -156,7 +101,9 @@ def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, event
                 plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of Harris Corner of Event " + str(i) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
+                """
                 
+                """
                 # Plot eFast Response
                 fig, ax = plt.subplots(1, 1,figsize=(12, 9))
                 plt.tight_layout()
@@ -176,18 +123,138 @@ def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, event
                 plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of eFast Corner of Event " + str(i) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
+                """
 
-                # Plot ArcStar Response
-                #fig, ax = plt.subplots(noRow, noCol,figsize=(12, 9))
-                #plt.tight_layout()
-                #for j, (row, col) in enumerate(cornerLocation):
-                #    if isCornerArcStar(image, prev_state, prev_state_inv, col, row, int(pol)):
-                #        temp = crop(image, col, row, 9)
-                #        ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner No. " + str(j))
-                #plt.savefig("../Output/" + str(time_step) + "us 2D ArcStar Corner of Event " + str(eventNo) + ".jpg", dpi=300)
-                #plt.show()
-                #plt.close(fig)
+                # Plot All eFast Response
+                ecornerCount = 0
+                ecornerLocation = []
+                for r in range(len(image)):
+                    for c in range(len(image[0])):
+                        if isCornerEFast(image, c, r, int(pol)):
+                            ecornerCount += 1
+                            ecornerLocation.append((r, c)) # store as row, col pair
+                if ecornerCount > 0:
+                    # Draw SAE with corner highlighted
+                    temp = np.zeros((HEIGHT, WIDTH), dtype=np.uint8)
+                    for row, col in ecornerLocation:
+                        temp[row][col] = 255
 
+                    drawHeatMapWhole(temp, i, eventSpecified, name="SAE Location of eFast Corners" + str(time_step) + "us")
+
+                    noRow, noCol = int((sqrt(ecornerCount))), ceil(ecornerCount / int(sqrt(ecornerCount)))
+
+                    fig, ax = plt.subplots(noRow, noCol,figsize=(30, 30))
+                    plt.tight_layout()
+                    for j, (row, col) in enumerate(ecornerLocation):
+                        temp = crop(image, col, row, 9)
+                        #ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner " + str(row) + ", " + str(col))
+                        ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol])
+                    plt.savefig("../Output/" + str(time_step) + "us 2D eFast, Corners detected - " + str(ecornerCount) + ", of Event " + str(eventNo) + ".jpg", dpi=100)
+                    plt.show()
+                    plt.close(fig)
+                
+                # Plot All ArcStar Response
+                acornerCount = 0
+                acornerLocation = []
+                for r in range(len(image)):
+                    for c in range(len(image[0])):
+                        if isCornerArcStar(image, prev_state, prev_state_inv, c, r, int(pol)):
+                            acornerCount += 1
+                            acornerLocation.append((r, c)) # store as row, col pair
+                if acornerCount > 0:
+                    temp = np.zeros((HEIGHT, WIDTH), dtype=np.uint8)
+                    for row, col in acornerLocation:
+                        temp[row][col] = 255
+
+                    drawHeatMapWhole(temp, i, eventSpecified, name="SAE Location of ArcStars Corners" + str(time_step) + "us")
+
+                    noRow, noCol = int((sqrt(acornerCount))), ceil(acornerCount / int(sqrt(acornerCount)))
+
+                    fig, ax = plt.subplots(noRow, noCol,figsize=(30, 30))
+                    plt.tight_layout()
+                    for j, (row, col) in enumerate(acornerLocation):
+                        temp = crop(image, col, row, 9)
+                        #ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title="Corner " + str(row) + ", " + str(col))
+                        ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol])
+                    plt.savefig("../Output/" + str(time_step) + "us 2D ArcStar, Corners detected - " + str(acornerCount) + ", of Event " + str(eventNo) + ".jpg", dpi=100)
+                    plt.show()
+                    plt.close(fig)
+
+                # Generate only eFast Location, only AStar Location and both
+                onlyEFast, onlyAStar, both = [], [], []
+                for row, col in ecornerLocation:
+                    if (row, col) not in acornerLocation:
+                        onlyEFast.append((row, col))
+                    else:
+                        both.append((row, col))
+
+                for row, col in acornerLocation:
+                    if (row, col) not in both:
+                        onlyAStar.append((row, col))
+
+                # Plot Only eFast
+                temp = np.zeros((HEIGHT, WIDTH), dtype=np.uint8)
+                for row, col in onlyEFast:
+                    temp[row][col] = 255
+
+                drawHeatMapWhole(temp, i, eventSpecified, name="SAE Location of only EFast Corners" + str(time_step) + "us")
+
+                noRow, noCol = int((sqrt(len(onlyEFast)))), ceil(len(onlyEFast) / int(sqrt(len(onlyEFast))))
+                fig, ax = plt.subplots(noRow, noCol,figsize=(30, 30))
+                plt.tight_layout()
+                for j, (row, col) in enumerate(onlyEFast):
+                    temp = crop(image, col, row, 9)
+                    ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title=str(row) + ", " + str(col))
+                plt.savefig("../Output/" + str(time_step) + "us 2D only eFast, Corners detected - " + str(len(onlyEFast)) + ", of Event " + str(eventNo) + ".jpg", dpi=100)
+                plt.show()
+                plt.close(fig)
+
+                fig = plt.figure(figsize=(16, 16))
+                plt.tight_layout()
+                for j, (row, col) in enumerate(onlyEFast):
+                    ax = fig.add_subplot(noRow, noCol, j+1, projection='3d')
+                    temp = crop(image, col, row, 9)
+                    ax = draw3DBarGraphSub(temp, i, subplot=ax, title=str(row) + ", " + str(col))
+                plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of only eFast Corner of Event " + str(i) + ".jpg", dpi=100)
+                plt.show()
+                plt.close(fig)
+
+                # Plot Only Arc*
+                temp = np.zeros((HEIGHT, WIDTH), dtype=np.uint8)
+                for row, col in onlyAStar:
+                    temp[row][col] = 255
+
+                drawHeatMapWhole(temp, i, eventSpecified, name="SAE Location of only ArcStar Corners" + str(time_step) + "us")
+
+                noRow, noCol = int((sqrt(len(onlyAStar)))), ceil(len(onlyAStar) / int(sqrt(len(onlyAStar))))
+                fig, ax = plt.subplots(noRow, noCol,figsize=(30, 30))
+                plt.tight_layout()
+                for j, (row, col) in enumerate(onlyAStar):
+                    temp = crop(image, col, row, 9)
+                    ax[j // noCol][j % noCol] = drawHeatMapSub(temp, i, subplot=ax[j // noCol][j % noCol], title=str(row) + ", " + str(col))
+                plt.savefig("../Output/" + str(time_step) + "us 2D only AStar, Corners detected - " + str(len(onlyAStar)) + ", of Event " + str(eventNo) + ".jpg", dpi=100)
+                plt.show()
+                plt.close(fig)
+
+                # Plot Both
+                temp = np.zeros((HEIGHT, WIDTH), dtype=np.uint8)
+                for row, col in both:
+                    temp[row][col] = 255
+
+                drawHeatMapWhole(temp, i, eventSpecified, name="SAE Location of Both Corners" + str(time_step) + "us")
+
+                noRow, noCol = int((sqrt(len(both)))), ceil(len(both) / int(sqrt(len(both))))
+                fig = plt.figure(figsize=(30, 30))
+                plt.tight_layout()
+                for j, (row, col) in enumerate(both):
+                    ax = fig.add_subplot(noRow, noCol, j+1)
+                    temp = crop(image, col, row, 9)
+                    ax = drawHeatMapSub(temp, i, subplot=ax, title=str(row) + ", " + str(col))
+                plt.savefig("../Output/" + str(time_step) + "us 2D Both, Corners detected - " + str(len(both)) + ", of Event " + str(eventNo) + ".jpg", dpi=100)
+                plt.show()
+                plt.close(fig)
+
+                """
                 #fig = plt.figure(figsize=(12, 9))
                 #plt.tight_layout()
                 #for j, (row, col) in enumerate(cornerLocation):
@@ -198,7 +265,9 @@ def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, event
                 #plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of ArcStar Corner of Event " + str(eventNo) + ".jpg", dpi=300)
                 #plt.show()
                 #plt.close(fig)
+                """
 
+                """
                 # Plot ArcStar Response
                 fig, ax = plt.subplots(1, 1,figsize=(12, 9))
                 plt.tight_layout()
@@ -218,8 +287,9 @@ def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, event
                 plt.savefig("../Output/" + str(time_step) + "us 3D Barplot of ArcStar Corner of Event " + str(i) + ".jpg", dpi=300)
                 plt.show()
                 plt.close(fig)
+                """
 
-                #break
+                break
 
             last_event = packet['events']['t'][i]
 
@@ -233,512 +303,9 @@ def read_aedat4(filename: str, time_step=66000, processAll=True, factor=1, event
                 accumulated_time = 0
                 ebbi_image[frame] = ebbi_image[frame-1]
 
-    return image
-
-def normalise(image):
-    oldMin = 0
-    oldMax = image.max()
-    newMax = 255
-
-    normalised = (image - oldMin)/(oldMax - oldMin)
-    normalised *= newMax
-    normalised = normalised.astype(np.uint8)
-
-    return normalised
-
-class eHarris():
-    def __init__(self, pixelSize=9, queueSize=25, harrisThreshold=8.0, windowSize=4, kernelSize=5):
-        self.queue = deque(maxlen=25)
-        self.harrisThreshold = harrisThreshold
-        self.windowSize = windowSize
-        self.kernelSize = kernelSize
-        self.last_score = None
-        self.Sx = np.empty(kernelSize)
-        self.Dx = np.empty(kernelSize)
-
-        for i in range(kernelSize):
-            self.Sx[i] = self.factorial(kernelSize-1)/(self.factorial(kernelSize-1-i)*self.factorial(i))
-            self.Dx[i] = self.pasc(i, kernelSize-2) - self.pasc(i-1, kernelSize-2)
-        
-        self.Gx = self.Sx * np.transpose(self.Dx)
-        self.Gx = self.Gx / np.max(self.Gx)
-
-        self.sigma = 1
-        self.A = 1.0/(2.0*pi*self.sigma**2)
-        self.l2 = (2*windowSize + 2 - kernelSize)/2
-        self.h = np.array((2*self.l2+1, 2*self.l2+1))
-
-        for row in range(-1*self.l2, self.l2+1):
-            for col in range(-1*self.l2, self.l2+1):
-                h_xy = self.A * exp(-(row**2 + col**2)/(2*self.sigma**2))
-                self.h[self.l2+row][self.l2+col] = h_xy
-
-        self.h /= np.sum(self.h)
-
-    def getLastScore(self):
-        return self.last_score
-
-    def factorial(self, n):
-        if n>1:
-            return n*self.factorial(n-1)
-        else:
-            return 1
-
-    def pasc(self, k, n):
-        if k>=0 and k<=n:
-            return self.factorial(n)/(self.factorial(n-k)*self.factorial(k))
-        else:
-            return 0
-
-    def getHarrisScore(self, image, centerX, centerY, pol):
-        # Check if it's at the border
-        if (centerX < self.windowSize or centerX > WIDTH - self.windowSize or centerY < self.windowSize or centerY > HEIGHT - self.windowSize):
-            return self.harrisThreshold - 10.0
-
-        local_frame = crop(image, centerX, centerY, self.windowSize)
-
-        l = 2*self.windowSize + 2 - self.kernelSize
-        dx = np.zeros((l, l))
-        dy = np.zeros((l, l))
-
-        for row in range(l):
-            for col in range(l):
-                for krow in range(self.kernelSize):
-                    for kcol in range(self.kernelSize):
-                        dx[row][col] += local_frame[row+krow][col+kcol] * self.Gx[krow][kcol]
-                        dx[row][col] += local_frame[row+krow][col+kcol] * self.Gx[kcol][krow]
-
-        a, b, d = 0.0, 0.0, 0.0
-        for row in range(l):
-            for col in range(l):
-                a += self.h[row][col] * dx[row][col] * dx[row][col]
-                b += self.h[row][col] * dx[row][col] * dy[row][col]
-                d += self.h[row][col] * dy[row][col] * dy[row][col]
-
-        score = a*d - b**2 - 0.04*(a+d)**2
-
-        return score
-
-    def isFeature(self, image, centerX, centerY, pol):
-        score = self.harrisThreshold - 10.0
-
-        if self.queue[-1]: # the queue is full
-            self.queue.popleft()
-            self.queue.append((centerX, centerY, pol))
-            score = self.getHarrisScore()
-            self.last_score = score
-        else:
-            self.queue.append((centerX, centerY, pol))
-            if self.queue[-1]:
-                score = self.getHarrisScore(image[:,:,pol], centerX, centerY, pol)
-                self.last_score = score
-
-        return score > self.harrisThreshold
-
-def gradient(image, filter, mode="same"):
-    return signal.convolve2d(image, filter, mode)
-
-def customHarrisCornerDet(image, centerX, centerY, pol, pixelSize=9, k=0.04):
-    # Check if we are at the border
-    max_scale = 1
-    cs = max_scale * 4
-    if (centerX < cs or centerX >= WIDTH-cs or centerY < cs or centerY >= HEIGHT-cs):
-        return False, None
-
-    check = image
-    noOfCorners, output, cornerLocation = None, np.zeros((check.shape[0], check.shape[1])), [None]
-
-    grad_x = gradient(check, SOBEL_X)
-    grad_y = gradient(check, SOBEL_Y)
-
-    Ixx = ndimage.gaussian_filter(grad_x**2, sigma=1)
-    Iyy = ndimage.gaussian_filter(grad_y**2, sigma=1)
-    Ixy = ndimage.gaussian_filter(grad_x*grad_y, sigma=1)
-
-    detA = Ixx * Iyy - Ixy**2
-    traceA = Ixx + Iyy
-    harris = detA - k*traceA**2
-
-    cornerLocation = corner_peaks(harris) # Shape is row*col
-    noOfCorners = len(cornerLocation)
-
-    for row, col in cornerLocation:
-        output[row][col] = 255
-
-    return noOfCorners, output, cornerLocation
-
-def openCVHarrisCornerDet(image, centerX, centerY, pol, pixelSize=9, k=0.04):
-    # neighbourhood size = 2
-    # sobel operator aperture param = 8
-    # k from det(M) - k(trace(M))^2 = 0.04
-
-    max_scale = 1
-    cs = max_scale * 4
-    if (centerX < cs or centerX >= WIDTH-cs or centerY < cs or centerY >= HEIGHT-cs):
-        return False, None, None
-
-    check = image
-    noOfCorners, output, cornerLocation = None, np.zeros((check.shape[0], check.shape[1])), [None]
-    #norm_image = check * (255/image.max())
-    #norm_image = norm_image.astype(np.uint8)
-    norm_image = normalise(check)
-    harris = cv2.cornerHarris(norm_image, 2, 7, k)
-    dst = cv2.dilate(harris, None)
-
-    noOfCorners = np.count_nonzero(dst > 0.6*dst.max())
-    cornerLocation = np.argwhere(dst > 0.6*dst.max()) # output is row*col of index
-    output[dst > 0.6*dst.max()] = [255]
-
-    # output to show:
-    #   no of corners (for subplot division), output corner image, list of corner locations, 
-    return noOfCorners, output, cornerLocation
-
-# Size can be either 5 or 10
-def crop(image, startX, startY, size):
-    half = size // 2
-    return image[startY-half:startY+(size-half), startX-half:startX+(size-half)]
-
-def getMaxIndex(image):
-    maxIndices = np.where(image == np.amax(image))
-    result = list(zip(maxIndices[0], maxIndices[1]))
-
-    return result
-
-def isCornerEFast(img, centerX, centerY, pol):
-    found = False
-    smallCount, bigCount = 0, 0
-    image = img
-
-    # Check if it's too close to the border of the SAE
-    max_scale = 1
-    cs = max_scale * 4
-    if (centerX < cs or centerX >= WIDTH-cs or centerY < cs or centerY >= HEIGHT-cs):
-        return False
-    
-    for i in range(len(SMALL_CIRCLE)):
-        for streak_size in range(3, 7):
-            if image[centerY + SMALL_CIRCLE[i][1]][centerX + SMALL_CIRCLE[i][0]] < image[centerY + SMALL_CIRCLE[(i-1+16)%16][1]][centerX + SMALL_CIRCLE[(i-1+16)%16][0]]:
-                continue
-
-            if image[centerY + SMALL_CIRCLE[(i + streak_size - 1)%16][1]][centerX + SMALL_CIRCLE[(i + streak_size - 1)%16][0]] < image[centerY + SMALL_CIRCLE[(i+streak_size)%16][1]][centerX + SMALL_CIRCLE[(i+streak_size)%16][0]]:
-                continue
-
-            min_t = image[centerY + SMALL_CIRCLE[i][1]][centerX + SMALL_CIRCLE[i][0]]
-
-            for j in range(1, streak_size):
-                tj = image[centerY + SMALL_CIRCLE[(i+j)%16][1]][centerX + SMALL_CIRCLE[(i+j)%16][0]]
-                if tj < min_t:
-                    min_t = tj
-            
-            did_break = False
-            for j in range(streak_size, len(SMALL_CIRCLE)):
-                tj = image[centerY + SMALL_CIRCLE[(i+j)%16][1]][centerX + SMALL_CIRCLE[(i+j)%16][0]]
-                if tj >= min_t:
-                    did_break = True
-                    break
-
-            if not did_break:
-                found = True
-                break
-
-        if found:
-            break
-
-    if found:
-        found = False
-        for i in range(len(BIG_CIRCLE)):
-            for streak_size in range(4, 9):
-                if image[centerY + BIG_CIRCLE[i][1]][centerX + BIG_CIRCLE[i][0]] < image[centerY + BIG_CIRCLE[(i-1+20)%20][1]][centerX + BIG_CIRCLE[(i-1+20)%20][0]]:
-                    continue
-
-                if image[centerY + BIG_CIRCLE[(i + streak_size - 1)%20][1]][centerX + BIG_CIRCLE[(i + streak_size - 1)%20][0]] < image[centerY + BIG_CIRCLE[(i+streak_size)%20][1]][centerX + BIG_CIRCLE[(i+streak_size)%20][0]]:
-                    continue
-
-                min_t = image[centerY + BIG_CIRCLE[i][1]][centerX + BIG_CIRCLE[i][0]]
-                for j in range(1, streak_size):
-                    tj = image[centerY + BIG_CIRCLE[(i+j)%20][1]][centerX + BIG_CIRCLE[(i+j)%20][0]]
-                    if tj < min_t:
-                        min_t = tj
-                
-                did_break = False
-                for j in range(streak_size, len(BIG_CIRCLE)):
-                    tj = image[centerY + BIG_CIRCLE[(i+j)%20][1]][centerX + BIG_CIRCLE[(i+j)%20][0]]
-                    if tj >= min_t:
-                        did_break = True
-                        break
-
-                if not did_break:
-                    found = True
-                    break
-
-            if found:
-                break
-
-    return found
-
-def isCornerArcStar(img, prev_state, prev_state_inv, centerX, centerY, pol, filter_threshold=0.05):
-    if pol == 0:
-        pol_inv = 1
-    else:
-        pol_inv = 0
-
-    t_last = prev_state
-    t_last_inv = prev_state_inv
-
-    # Filter out redundant spikes, e.g. spikes of the same polarity that's fired off consecutively in short period
-    if ((img[centerY][centerX] > t_last + filter_threshold) or (t_last_inv > t_last)):
-        t_last = img[centerY][centerX]
-    else:
-        t_last = img[centerY][centerX]
-        return False
-
-    # Check if it's too close to the border of the SAE
-    max_scale = 1
-    cs = max_scale * 4
-    if (centerX < cs or centerX >= WIDTH-cs or centerY < cs or centerY >= HEIGHT-cs):
-        return False
-
-    found = False
-    image = img
-    segment_new_min_t = image[centerY + SMALL_CIRCLE[0][1]][centerX + SMALL_CIRCLE[0][0]]
-    arc_left_idx, arc_right_idx = 0, 0 # this is the CCW & CW index in the original paper
-    
-    for i in range(1, len(SMALL_CIRCLE)):
-        t = image[centerY + SMALL_CIRCLE[i][1]][centerX + SMALL_CIRCLE[i][0]]
-        if t > segment_new_min_t:
-            segment_new_min_t = t
-            arc_right_idx = i
-    
-    arc_left_idx = (arc_right_idx - 1 + len(SMALL_CIRCLE))%len(SMALL_CIRCLE)
-    arc_right_idx = (arc_right_idx + 1)%len(SMALL_CIRCLE)
-
-    arc_left_val = image[centerY + SMALL_CIRCLE[arc_left_idx][1]][centerX + SMALL_CIRCLE[arc_left_idx][0]]
-    arc_right_val = image[centerY + SMALL_CIRCLE[arc_right_idx][1]][centerX + SMALL_CIRCLE[arc_right_idx][0]]
-    arc_left_min_t = arc_left_val
-    arc_right_min_t = arc_right_val
-
-    for j in range(0, 3): # 3 is the smallest segment length of an acceptable arc
-        if arc_right_val > arc_left_val:
-            if arc_right_min_t < segment_new_min_t:
-                segment_new_min_t = arc_right_min_t
-            
-            arc_right_idx = (arc_right_idx + 1)%len(SMALL_CIRCLE)
-            arc_right_val = image[centerY + SMALL_CIRCLE[arc_right_idx][1]][centerX + SMALL_CIRCLE[arc_right_idx][0]]
-            if arc_right_val < arc_right_min_t:
-                arc_right_min_t = arc_right_val
-
-        else:
-            if arc_left_min_t < segment_new_min_t:
-                segment_new_min_t = arc_left_min_t
-
-            arc_left_idx = (arc_left_idx - 1 + len(SMALL_CIRCLE))%len(SMALL_CIRCLE)
-            arc_left_val = image[centerY + SMALL_CIRCLE[arc_left_idx][1]][centerX + SMALL_CIRCLE[arc_left_idx][0]]
-            if arc_left_val < arc_left_min_t:
-                arc_left_min_t = arc_left_val
-    
-    newest_segment_size = 3
-
-    for j in range(3, len(SMALL_CIRCLE)): # look through the rest of the circle
-        if arc_right_val > arc_left_val:
-            if arc_right_val >= segment_new_min_t:
-                newest_segment_size = j+1
-                if arc_right_min_t < segment_new_min_t:
-                    segment_new_min_t = arc_right_min_t
-        
-            arc_right_idx = (arc_right_idx+1)%len(SMALL_CIRCLE)
-            arc_right_val = image[centerY + SMALL_CIRCLE[arc_right_idx][1]][centerX + SMALL_CIRCLE[arc_right_idx][0]]
-            if arc_right_val < arc_right_min_t:
-                arc_right_min_t = arc_right_val
-
-        else:
-            if arc_left_val >= segment_new_min_t:
-                newest_segment_size = j+1
-                if arc_left_min_t < segment_new_min_t:
-                    segment_new_min_t = arc_left_min_t
-
-            arc_left_idx = (arc_left_idx - 1 + len(SMALL_CIRCLE))%len(SMALL_CIRCLE)
-            arc_left_val = image[centerY + SMALL_CIRCLE[arc_left_idx][1]][centerX + SMALL_CIRCLE[arc_left_idx][0]]
-            if arc_left_val < arc_left_min_t:
-                arc_left_min_t = arc_left_val
-
-    if ((newest_segment_size <= 6) or (newest_segment_size >= len(SMALL_CIRCLE) - 6) and (newest_segment_size <= (len(SMALL_CIRCLE) - 3))): # Check the arc size satisfy the requirement
-        found = True
-    
-    # Search through the large circle if small circle verifies
-    if found:
-        found = False
-        segment_new_min_t = image[centerY + BIG_CIRCLE[0][1]][centerX + BIG_CIRCLE[0][0]]
-        arc_right_idx = 0
-
-        for i in range(1, len(BIG_CIRCLE)):
-            t = image[centerY + BIG_CIRCLE[i][1]][centerX + BIG_CIRCLE[i][0]]
-            if t > segment_new_min_t:
-                segment_new_min_t = t
-                arc_right_idx = i
-
-        arc_left_idx = (arc_right_idx - 1 + len(BIG_CIRCLE))%len(BIG_CIRCLE)
-        arc_right_idx = (arc_right_idx + 1)%len(BIG_CIRCLE)
-        arc_left_val = image[centerY + BIG_CIRCLE[arc_left_idx][1]][centerX + BIG_CIRCLE[arc_left_idx][0]]
-        arc_right_val = image[centerY + BIG_CIRCLE[arc_right_idx][1]][centerX + BIG_CIRCLE[arc_right_idx][0]]
-
-        arc_left_min_t = arc_left_val
-        arc_right_min_t = arc_right_val
-
-        for j in range(1, 4):
-            if (arc_right_val > arc_left_val):
-                if (arc_right_min_t > arc_left_min_t):
-                    segment_new_min_t
-                arc_right_idx = (arc_right_idx+1)%len(BIG_CIRCLE)
-                arc_right_val = image[centerY + BIG_CIRCLE[arc_right_idx][1]][centerX + BIG_CIRCLE[arc_right_idx][0]]
-
-                if arc_right_val < arc_right_min_t:
-                    arc_right_min_t = arc_right_val
-            else:
-                if arc_left_min_t < segment_new_min_t:
-                    segment_new_min_t = arc_left_min_t
-                arc_left_idx = (arc_left_idx - 1 + len(BIG_CIRCLE))%len(BIG_CIRCLE)
-                arc_left_val = image[centerY + BIG_CIRCLE[arc_left_idx][1]][centerX + BIG_CIRCLE[arc_left_idx][0]]
-                if arc_left_val < arc_left_min_t:
-                    arc_left_min_t = arc_left_val
-
-        newest_segment_size = 4
-
-        for j in range(4, 8):
-            if arc_right_val > arc_left_val:
-                if arc_right_val >= segment_new_min_t:
-                    newest_segment_size = j+1
-                    if arc_right_min_t < segment_new_min_t:
-                        segment_new_min_t = arc_right_min_t
-
-                arc_right_idx = (arc_right_idx + 1)%len(BIG_CIRCLE)
-                arc_right_val = image[centerY + BIG_CIRCLE[arc_right_idx][1]][centerX + BIG_CIRCLE[arc_right_idx][0]]
-                if arc_right_val < arc_right_min_t:
-                    arc_right_min_t = arc_right_val
-            
-            else:
-                if arc_left_val >= segment_new_min_t:
-                    newest_segment_size = j+1
-                    if arc_left_min_t < segment_new_min_t:
-                        segment_new_min_t = arc_left_min_t
-                    
-                arc_left_idx = (arc_left_idx - 1 + len(BIG_CIRCLE))%len(BIG_CIRCLE)
-                arc_left_val = image[centerY + BIG_CIRCLE[arc_left_idx][1]][centerX + BIG_CIRCLE[arc_left_idx][0]]
-                if arc_left_val < arc_left_min_t:
-                    arc_left_min_t = arc_left_val
-
-            if ((newest_segment_size <= 8) or ((newest_segment_size >= (len(BIG_CIRCLE) - 8)) and (newest_segment_size <= (len(BIG_CIRCLE) - 4)))):
-                found = True
-
-    return found
-
-def drawHeatMapSub(image, number, display=True, name=None, subplot=None, title=None):
-    subplot.set_title(title)
-    subplot.imshow(image, cmap='coolwarm')
-    return subplot
-
-def drawHeatMapWhole(image, number, display=True, name=None, subplot=None, title=None, symbol=None, cornerLocation=None):
-    fig = plt.figure()
-
-    plt.imshow(image, cmap='coolwarm')
-
-    if symbol:
-        row, col = [], []
-        for i, j in cornerLocation:
-            row.append(j)
-            col.append(i)
-        plt.scatter(row, col, color='r', marker=symbol)
-
-    m = cm.ScalarMappable(cmap=cm.coolwarm)
-    m.set_array(image)
-    plt.colorbar(m)
-
-    if name:
-        plt.savefig("../Output/2D Heatmap No " + str(number) + " " + name + ".jpg", dpi=300)
-    else:
-        plt.savefig("../Output/2D Heatmap No " + str(number) + ".jpg", dpi=300)
-    
-    if display:
-        plt.show()
-    plt.close()
-
-def draw3DHeatMap(heatmap, number, display=True, name=None):
-    heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2GRAY)
-
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    xx, yy = np.mgrid[0:heatmap.shape[0], 0:heatmap.shape[1]]
-    ax.plot_surface(xx, yy, heatmap, rstride=1, cstride=1, cmap="coolwarm") #cmap="coolwarm" "gray"
-    
-    #m = cm.ScalarMappable(cmap=cm.coolwarm)
-    #m.set_array(heatmap)
-    #plt.colorbar(m)
-    #ax.view_init(0, 60) # parameters are elevation_angle in z plane, azimuth_angle in x,y plane
-
-    if name:
-        plt.savefig("../Output/3D Heatmap No " + str(number) + " " + name + ".jpg", dpi=300)
-    else:
-        plt.savefig("../Output/3D Heatmap No " + str(number) + ".jpg", dpi=300)
-
-    if display:
-        plt.show()
-    plt.close()
-
-def draw3DBarGraphSub(image, number, display=True, subplot=None, title=None):
-    subplot.set_title(title)
-    xpos, ypos = np.meshgrid(np.arange(image.shape[1]), np.arange(image.shape[0]))
-    xpos = xpos.flatten()
-    ypos = ypos.flatten()
-    zpos = image.flatten()
-
-    # label the middle pixel, which is the largest value, with colour black, everything else is coloured blue
-    colour = []
-    for i in range(len(zpos)):
-        #if i == len(zpos) // 2:
-        if i == 40:
-            colour.append('black')
-        elif i in radii3:
-            colour.append('red')
-        elif i in radii4:
-            colour.append('green')
-        else:
-            colour.append('blue')
-
-    subplot.bar3d(xpos, ypos, np.zeros(len(zpos)), 1, 1, zpos, color=colour)
-
-    return subplot
-
-def draw3DBarGraphWhole(image, number, display=True):
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    xpos, ypos = np.meshgrid(np.arange(image.shape[1]), np.arange(image.shape[0]))
-    xpos = xpos.flatten()
-    ypos = ypos.flatten()
-    zpos = image.flatten()
-
-    # label the middle pixel, which is the largest value, with colour black, everything else is coloured blue
-    colour = []
-    for i in range(len(zpos)):
-        #if i == len(zpos) // 2:
-        if i == 40:
-            colour.append('black')
-        elif i in radii3:
-            colour.append('red')
-        elif i in radii4:
-            colour.append('green')
-        else:
-            colour.append('blue')
-
-    ax.bar3d(xpos, ypos, np.zeros(len(zpos)), 1, 1, zpos, color=colour) #xpos, ypos, np.zeros(len(zpos)) gives the position of each bar. 1, 1, zpos give the width, depth and height of the bars
-    
-    plt.savefig("../Output/3DBar Graph No " + str(number) + ".jpg", dpi=300)
-
-    if display:
-        plt.show()
-    plt.close()
-
 if __name__ == "__main__":
     if not os.path.isdir("../Output"):
         os.mkdir("../Output")
 
-    image = read_aedat4(aedat4_file, time_step=33000, processAll=False, eventSpecified=True, eventNo=5147) # 33000ms interval, @event=54000, we get arc* response, no for eFast
+    read_aedat4(aedat4_file, time_step=5000, processAll=False, eventSpecified=True, eventNo=72342) # 33000ms interval, @event=54000, we get arc* response, no for eFast
     # 5000ms interval, @eventNo 44000, eFast response, no arc* response
