@@ -7,6 +7,7 @@ from arcstar import *
 from util import *
 from harris_detector import *
 from plot_tools import *
+from process_events import background_activity_filter
 
 aedat4_file = '../EBBINNOT_AEDAT4/Recording/20180711_Site1_3pm_12mm_01.aedat4'
 dt = 1
@@ -40,6 +41,8 @@ def read_aedat4(filename:str, time_step:int=66000, processAll:bool=True, factor:
         allArcStarQueue = []
 
         eventCount = 0
+        x_prev, y_prev, p_prev = 0, 0, 0
+        valid_index = 0
 
         for i in tqdm(range(0, total_events, dt), desc='processing events'):
             y = packet['events']['y'][i]

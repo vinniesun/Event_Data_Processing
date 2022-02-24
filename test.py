@@ -31,12 +31,27 @@ def main():
     tests.test_scalar_equal(test_array.events[0]["t"], 100)
 
     aedat_file = "/Users/vincent/Desktop/CityUHK/EBBINNOT/EBBINNOT_AEDAT4/Recording/20180711_Site1_3pm_12mm_01.aedat4"
-    bin_file = "/Users/vincent/Desktop/CityUHK/EBBINNOT/DAVIS_Events/Recording/20180711_Site1_3pm_12mm_01.bin"
+    #bin_file = "/Users/vincent/Desktop/CityUHK/EBBINNOT/DAVIS_Events/Recording/20180711_Site1_3pm_12mm_01.bin"
 
     current = aedat_to_events(aedat_file)
     print(current.events[0])
-    current = bin_to_events(bin_file)
-    print(current.events[0])
+    print("-----------------------------------------")
+
+    slices = time_window_slice(current)
+    #slices = event_count_slice(current)
+    print(slices[0])
+    print("-----------------------------------------")
+    print("Total number of event is: " + str(current.num_events) + ".\n" + 
+        "Total number of slices at 33ms window is: " + str(len(slices)) + ".\n" + 
+        "Number of events in the first slice is: " + str(len(slices[0])) + ".\n" +
+        "Number of events in the second slice is: " + str(len(slices[1])) + ".\n" +
+        "Smallest Timestamp: " + str(slices[0]["t"][0]) + ", Biggest Timestamp: " + str(slices[0]["t"][-1]) + ", delta_T is: " + str(slices[0]["t"][-1] - slices[0]["t"][0]))
+    print("-----------------------------------------")
+
+    images = accumulate_and_generate(slices, WIDTH, HEIGHT)
+    print(images[0].shape)
+    #current = bin_to_events(bin_file)
+    #print(current.events[0])
 
 if __name__ == "__main__":
     main()
