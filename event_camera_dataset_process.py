@@ -1,7 +1,8 @@
 from turtle import back
 import cv2
 
-from process_events import *
+from src.process_events import *
+from src.plot_tools import *
 
 WIDTH = 240
 HEIGHT = 180
@@ -28,7 +29,7 @@ def display_video(images) -> None:
 
     cv2.destroyAllWindows()
 
-def save_video(frames) -> None:
+def save_video(frames, mode: str) -> None:
     # Store the output as a video
     img_array = []
     for f in frames:
@@ -37,7 +38,7 @@ def save_video(frames) -> None:
         size = (width, height)
         img_array.append(f)
     
-    vid_recorder = cv2.VideoWriter(output+'shapes.avi', cv2.VideoWriter_fourcc(*'DIVX'), 15, size)
+    vid_recorder = cv2.VideoWriter(output+mode+' shapes.avi', cv2.VideoWriter_fourcc(*'DIVX'), 15, size)
 
     for i in img_array:
         vid_recorder.write(i)
@@ -60,7 +61,8 @@ def process_text_file(filename: str) -> Events:
     return events
 
 def main():
-    filename = "/Users/vincent/Desktop/CityUHK/Event_Camera_Dataset/shapes_rotation/events.txt"
+    #filename = "/Users/vincent/Desktop/CityUHK/Event_Camera_Dataset/shapes_rotation/events.txt"
+    filename = "/Users/vincent/Desktop/CityUHK/Event_Camera_Dataset/shapes_translation/events.txt"
 
     # Read the event text file and generate our stream of events
     current_events = process_text_file(filename)
@@ -68,12 +70,12 @@ def main():
     print("---------------------------------------------------------------")
 
     # Generate Time Surface
-    time_surface = generate_time_surface(current_events, 5000, event_start=0, event_end=5000)
-    print(time_surface.shape)
-    print("---------------------------------------------------------------")
+    #time_surface = generate_time_surface(current_events, 5000, event_start=0, event_end=5000)
+    #print(time_surface.shape)
+    #print("---------------------------------------------------------------")
     
     # Apply refractory filtering
-    #current_events.events, current_events.num_events = refractory_filtering(current_events, refractory_period=100)
+    #current_events.events, current_events.num_events = refractory_filtering(current_events, refractory_period=500)
     #print("Total Number of Events After Refractory Filtering: " + str(current_events.num_events))
     #print("---------------------------------------------------------------")
 
@@ -82,18 +84,33 @@ def main():
     #print("Total Number of Events After Nearest Neighbourhood Filtering: " + str(current_events.num_events))
     #print("---------------------------------------------------------------")
 
+    # Feature Tracks
+    features = []
+    on_count, off_count = 0, 0
+    for i in tqdm(range(50000)):
+        if current_events.events[i]["p"]:
+            on_count += 1
+        else:
+            off_count += 1
+        features.append((current_events.events[i]["x"], current_events.events[i]["y"], int(current_events.events[i]["p"])*255))
+    drawFeatureTrack3D(features, "", 33000)
+    drawFeatureTrack2D(features, "", 33000)
+    print("Number of On event in this feature track: " + str(on_count))
+    print("Number of Off event in this feature track: " + str(off_count))
+    print("---------------------------------------------------------------")
+
     # generate frames based on accumulated time
     sliced = time_window_slice(current_events, time_window=33000)
     frames = accumulate_and_generate(sliced, WIDTH, HEIGHT)
     print("---------------------------------------------------------------")
 
     # add a dummy channel to the frame so it can be displayed with OpenCV
-    #frames = addChannel(frames)
-    #print("---------------------------------------------------------------")
+    frames = addChannel(frames)
+    print("---------------------------------------------------------------")
 
     # Display the resulting frames as a video
     #display_video(frames)
-    #save_video(frames)
+    save_video(frames, "filtered")
 
 if __name__ == "__main__":
     main()

@@ -2,12 +2,12 @@ from math import ceil, sqrt
 import aedat
 import os
 from tqdm import tqdm
-from efast import *
-from arcstar import *
-from util import *
-from harris_detector import *
-from plot_tools import *
-from process_events import background_activity_filter
+from src.efast import *
+from src.arcstar import *
+from src.util import *
+from src.harris_detector import *
+from src.plot_tools import *
+from src.process_events import background_activity_filter
 
 aedat4_file = '../EBBINNOT_AEDAT4/Recording/20180711_Site1_3pm_12mm_01.aedat4'
 dt = 1

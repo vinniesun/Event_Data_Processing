@@ -1,4 +1,4 @@
-from process_events import *
+from src.process_events import *
 import unittest
 
 WIDTH = 240
