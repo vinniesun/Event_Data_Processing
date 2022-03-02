@@ -22,16 +22,16 @@ def drawFeatureTrack2D(pastEventQueue, name, time_step):
     xData = []
     yData = []
     cData = []
-    for i, (locX, locY, corner) in enumerate(pastEventQueue):
+    for i, (locX, locY, t, corner) in enumerate(pastEventQueue):
         xData.append(locX)
-        yData.append(i)
+        yData.append(t)
         cData.append(corner)
 
     plt.scatter(xData, yData, s=1, c=cData, cmap=myCMap)
     plt.xlabel("width")
-    plt.ylabel("event no")
+    plt.ylabel("time")
 
-    plt.savefig("../Output/2D Event Feature Track of " + str(time_step) + ".jpg", dpi=300)
+    plt.savefig("../Output/2D Event Feature Track of " + name + str(time_step) + ".jpg", dpi=300)
     plt.show()
     plt.close()
 
@@ -48,18 +48,18 @@ def drawFeatureTrack3D(pastEventQueue, name, time_step):
     yData = []
     zData = []
     cData = []
-    for i, (locX, locY, corner) in enumerate(pastEventQueue):
+    for i, (locX, locY, t, corner) in enumerate(pastEventQueue):
         xData.append(locX)
         yData.append(locY)
-        zData.append(i)
+        zData.append(t)
         cData.append(corner)
 
     ax.scatter3D(xData, yData, zData, s=1, c=cData, cmap=myCMap)
     ax.set_xlabel("width")
     ax.set_ylabel("height")
-    ax.set_zlabel("event no")
+    ax.set_zlabel("time")
 
-    plt.savefig("../Output/3D Event Feature Track of " + str(time_step) + ".jpg", dpi=300)
+    plt.savefig("../Output/3D Event Feature Track of " + name + str(time_step) + ".jpg", dpi=300)
     plt.show()
     plt.close()
 

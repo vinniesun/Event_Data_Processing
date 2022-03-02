@@ -3,7 +3,7 @@ from skimage.feature import corner_peaks
 import numpy as np
 import cv2
 
-from util import normalise
+from .util import normalise
 
 # The HEIGHT and WIDTH of a DAVIS Camera
 WIDTH = 240

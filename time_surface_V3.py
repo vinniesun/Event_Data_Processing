@@ -1,5 +1,6 @@
 from math import ceil, sqrt
 import os
+from re import T
 from src.efast import *
 from src.arcstar import *
 from src.util import *
@@ -8,6 +9,57 @@ from src.plot_tools import *
 from src.process_events import *
 
 aedat4_file = '../EBBINNOT_AEDAT4/Recording/20180711_Site1_3pm_12mm_01.aedat4'
+
+def drawFeatureTrack2D_New(pastEventQueue, name, time_step):
+    fig = plt.figure(figsize=(16,10))
+    c = ["red","lightcoral","black", "palegreen","green"]
+    v = [0,.4,.5,0.6,1.]
+    l = list(zip(v,c))
+    myCMap=LinearSegmentedColormap.from_list('rg',l, N=256)
+
+    xData = []
+    yData = []
+    cData = []
+    for i, (_, locX, locY, t, corner) in enumerate(pastEventQueue):
+        xData.append(locX)
+        yData.append(t)
+        cData.append(corner)
+
+    plt.scatter(xData, yData, s=1, c=cData, cmap=myCMap)
+    plt.xlabel("width")
+    plt.ylabel("time")
+
+    plt.savefig("../Output/2D Event Feature Track of " + name + str(time_step) + ".jpg", dpi=300)
+    plt.show()
+    plt.close()
+
+def drawFeatureTrack3D_New(pastEventQueue, name, time_step):
+    fig = plt.figure(figsize=(16,10))
+    ax = plt.axes(projection='3d')
+    ax.set_zscale("linear")
+    c = ["red","lightcoral","black", "palegreen","green"]
+    v = [0,.4,.5,0.6,1.]
+    l = list(zip(v,c))
+    myCMap=LinearSegmentedColormap.from_list('rg',l, N=256)
+
+    xData = []
+    yData = []
+    zData = []
+    cData = []
+    for i, (_, locX, locY, t, corner) in enumerate(pastEventQueue):
+        xData.append(locX)
+        yData.append(locY)
+        zData.append(t)
+        cData.append(corner)
+
+    ax.scatter3D(xData, yData, zData, s=1, c=cData, cmap=myCMap)
+    ax.set_xlabel("width")
+    ax.set_ylabel("height")
+    ax.set_zlabel("time")
+
+    plt.savefig("../Output/3D Event Feature Track of " + name + str(time_step) + ".jpg", dpi=300)
+    plt.show()
+    plt.close()
 
 def main() -> None:
     # Load file and extract all events
@@ -22,7 +74,7 @@ def main() -> None:
 
     
     # Apply Background Activity Filtering
-    current_events.events, current_events.num_events = background_activity_filter(current_events, time_window=33000)
+    current_events.events, current_events.num_events = background_activity_filter(current_events, time_window=5000) # Try 1ms~5ms
     print("After NN filtering, number of events remaining is: ", current_events.num_events)
     print("---------------------------------------------------------------")
 
@@ -66,30 +118,42 @@ def main() -> None:
         isArcStar = isCornerArcStar(image, prev_state, prev_state_inv, x, y, int(p))
 
         if isEFast and isArcStar:
-            pastEventQueue.append((x, y, 255))
-            allEFastQueue.append((image.copy(), x, y, i, p))
-            allArcStarQueue.append((image.copy(), x, y, i, p))
-            bothQueue.append((image.copy(), x, y, i, p))
+            pastEventQueue.append((x, y, t, 255))
+            allEFastQueue.append((image.copy(), x, y, t, p))
+            allArcStarQueue.append((image.copy(), x, y, t, p))
+            bothQueue.append((image.copy(), x, y, t, p))
         elif isEFast:
-            pastEventQueue.append((x, y, 255))
-            allEFastQueue.append((image.copy(), x, y, i, p))
-            eFastQueue.append((image.copy(), x, y, i, p))
+            pastEventQueue.append((x, y, t, 255))
+            allEFastQueue.append((image.copy(), x, y, t, p))
+            eFastQueue.append((image.copy(), x, y, t, p))
         elif isArcStar:
-            pastEventQueue.append((x, y, 255))
-            ArcStarQueue.append((image.copy(), x, y, i, p))
-            allArcStarQueue.append((image.copy(), x, y, i, p))
+            pastEventQueue.append((x, y, t, 255))
+            ArcStarQueue.append((image.copy(), x, y, t, p))
+            allArcStarQueue.append((image.copy(), x, y, t, p))
         else:
-            pastEventQueue.append((x, y, 0))
+            pastEventQueue.append((x, y, t, 0))
 
     image = sae[:, :, int(p)]
 
     print(on_count, off_count)
     # Draw the Current SAE
-    drawHeatMapWhole(image, 102343, True, name="SAE" + str(33000) + "us")
+    drawHeatMapWhole(image, 102343, True, name="SAE" + str(5000) + "us")
 
     # Plot Feature Track of last 3000 Events
-    drawFeatureTrack3D(pastEventQueue, name="All Event Feature Track", time_step=33000)
-    drawFeatureTrack2D(pastEventQueue, name="All Event Feature Track", time_step=33000)
+    drawFeatureTrack3D(pastEventQueue, name="All Event Feature Track", time_step=5000)
+    drawFeatureTrack2D(pastEventQueue, name="All Event Feature Track", time_step=5000)
+
+    # Plot eFast corner Tracks of last 3000 Events
+    drawFeatureTrack3D_New(allEFastQueue, name="All eFast Corner Feature Track", time_step=5000)
+    drawFeatureTrack2D_New(allEFastQueue, name="All eFast Corner Feature Track", time_step=5000)
+
+    # Plot Arc* corner Tracks of last 3000 Events
+    drawFeatureTrack3D_New(allArcStarQueue, name="All ArcStar Corner Feature Track", time_step=5000)
+    drawFeatureTrack2D_New(allArcStarQueue, name="All ArcStar Corner Feature Track", time_step=5000)
+
+    # Plot Both corner Tracks of last 3000 Events
+    drawFeatureTrack3D_New(bothQueue, name="All Both Corner Feature Track", time_step=5000)
+    drawFeatureTrack2D_New(bothQueue, name="All Both Corner Feature Track", time_step=5000)
 
     # Plot All eFast Response
     noRow, noCol = 5, 4
@@ -105,11 +169,11 @@ def main() -> None:
         ax = fig.add_subplot(noRow, noCol, j+1) 
         temp = crop(img, locX, locY, 9)
         ax = drawHeatMapSub(temp, recEventNo, subplot=ax, title=str(recEventNo) + "\n" + str(locY) + ", " + str(locX))
-    plt.savefig("../Output/" + str(33000) + "us 2D eFast Only, Corners detected - " + str(len(eFastQueue)) + ".jpg", dpi=300)
+    plt.savefig("../Output/" + str(5000) + "us 2D eFast Only, Corners detected - " + str(len(eFastQueue)) + ".jpg", dpi=300)
     plt.show()
     plt.close(fig)
     
-    drawEventLocation(SAELocation, i, True, name="Only eFast SAE Location" + str(33000) + "us", cornerLocation=eFastQueue[-20:])
+    drawEventLocation(SAELocation, i, True, name="Only eFast SAE Location" + str(5000) + "us", cornerLocation=eFastQueue[-20:])
 
     # Plot All ArcStar Response
     noRow, noCol = 5, 4
@@ -125,11 +189,11 @@ def main() -> None:
         ax = fig.add_subplot(noRow, noCol, j+1)
         temp = crop(img, locX, locY, 9)
         ax = drawHeatMapSub(temp, recEventNo, subplot=ax, title=str(recEventNo) + "\n" + str(locY) + ", " + str(locX))
-    plt.savefig("../Output/" + str(33000) + "us 2D ArcStar Only, Corners detected - " + str(len(ArcStarQueue)) + ".jpg", dpi=300)
+    plt.savefig("../Output/" + str(5000) + "us 2D ArcStar Only, Corners detected - " + str(len(ArcStarQueue)) + ".jpg", dpi=300)
     plt.show()
     plt.close(fig)
     
-    drawEventLocation(SAELocation, i, True, name="Only ArcStar SAE Location" + str(33000) + "us", cornerLocation=ArcStarQueue[-20:])
+    drawEventLocation(SAELocation, i, True, name="Only ArcStar SAE Location" + str(5000) + "us", cornerLocation=ArcStarQueue[-20:])
 
     # Plot Both
     noRow, noCol = 5, 4
@@ -145,11 +209,11 @@ def main() -> None:
         ax = fig.add_subplot(noRow, noCol, j+1)
         temp = crop(img, locX, locY, 9)
         ax = drawHeatMapSub(temp, recEventNo, subplot=ax, title=str(recEventNo) + "\n" + str(locY) + ", " + str(locX))
-    plt.savefig("../Output/" + str(33000) + "us 2D Both, Corners detected - " + str(len(bothQueue)) + ".jpg", dpi=300)
+    plt.savefig("../Output/" + str(5000) + "us 2D Both, Corners detected - " + str(len(bothQueue)) + ".jpg", dpi=300)
     plt.show()
     plt.close(fig)
     
-    drawEventLocation(SAELocation, i, True, name="Both SAE Location" + str(33000) + "us", cornerLocation=bothQueue[-20:])
+    drawEventLocation(SAELocation, i, True, name="Both SAE Location" + str(5000) + "us", cornerLocation=bothQueue[-20:])
 
     # Plot all corners detected by eFast
     SAELocation = np.ones((HEIGHT, WIDTH), dtype=np.uint8)
@@ -159,7 +223,7 @@ def main() -> None:
             SAELocation[locY][locX] = 255 # for On Events
         else:
             SAELocation[locY][locX] = 0 # for Off Events
-    drawEventLocation(SAELocation, i, True, name="All eFast SAE Location" + str(33000) + "us", cornerLocation=allEFastQueue)
+    drawEventLocation(SAELocation, i, True, name="All eFast SAE Location" + str(5000) + "us", cornerLocation=allEFastQueue)
 
     # Plot all corners detected by ArcStar
     SAELocation = np.ones((HEIGHT, WIDTH), dtype=np.uint8)
@@ -169,7 +233,7 @@ def main() -> None:
             SAELocation[locY][locX] = 255 # for On Events
         else:
             SAELocation[locY][locX] = 0 # for Off Events
-    drawEventLocation(SAELocation, i, True, name="All ArcStar SAE Location" + str(33000) + "us", cornerLocation=allArcStarQueue)
+    drawEventLocation(SAELocation, i, True, name="All ArcStar SAE Location" + str(5000) + "us", cornerLocation=allArcStarQueue)
 
     # Plot all corners detected by ArcStar
     SAELocation = np.ones((HEIGHT, WIDTH), dtype=np.uint8)
@@ -179,7 +243,7 @@ def main() -> None:
             SAELocation[locY][locX] = 255 # for On Events
         else:
             SAELocation[locY][locX] = 0 # for Off Events
-    drawEventLocation(SAELocation, i, True, name="All of Both SAE Location" + str(33000) + "us", cornerLocation=bothQueue)
+    drawEventLocation(SAELocation, i, True, name="All of Both SAE Location" + str(5000) + "us", cornerLocation=bothQueue)
 
 if __name__ == "__main__":
     if not os.path.isdir("../Output"):

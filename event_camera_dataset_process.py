@@ -3,9 +3,14 @@ import cv2
 
 from src.process_events import *
 from src.plot_tools import *
+from src.arcstar import *
+from src.efast import *
 
 WIDTH = 240
 HEIGHT = 180
+ACCUMULATED_TIME = 33000
+REFRACTORY_PERIOD = 5000
+NN_WINDOW = 5000
 output = "../Output/"
 
 def addChannel(image):
@@ -68,49 +73,72 @@ def main():
     current_events = process_text_file(filename)
     print("Total Number of Events extracted: " + str(current_events.num_events))
     print("---------------------------------------------------------------")
-
-    # Generate Time Surface
-    #time_surface = generate_time_surface(current_events, 5000, event_start=0, event_end=5000)
-    #print(time_surface.shape)
-    #print("---------------------------------------------------------------")
     
     # Apply refractory filtering
-    #current_events.events, current_events.num_events = refractory_filtering(current_events, refractory_period=500)
-    #print("Total Number of Events After Refractory Filtering: " + str(current_events.num_events))
-    #print("---------------------------------------------------------------")
+    current_events.events, current_events.num_events = refractory_filtering(current_events, refractory_period=REFRACTORY_PERIOD)
+    print("Total Number of Events After Refractory Filtering: " + str(current_events.num_events))
+    print("---------------------------------------------------------------")
 
     # Apply nearest neighbourhood/background activity filtering
-    #current_events.events, current_events.num_events = background_activity_filter(current_events, time_window=500)
-    #print("Total Number of Events After Nearest Neighbourhood Filtering: " + str(current_events.num_events))
-    #print("---------------------------------------------------------------")
+    current_events.events, current_events.num_events = background_activity_filter(current_events, time_window=NN_WINDOW)
+    print("Total Number of Events After Nearest Neighbourhood Filtering: " + str(current_events.num_events))
+    #print("---------------------------------------------------------------")    
 
-    # Feature Tracks
-    features = []
+    # Find all Corners & All Events Feature Track
+    # Generate Time Surface
+    time_surface = generate_time_surface(current_events, ACCUMULATED_TIME, event_start=0, event_end=1)
+    prev_time = current_events.events[0]["t"]
+    eFastQueue, ArcStarQueue = [], []
+    features = [None] * current_events.num_events
+    features[0] = (current_events.events[0]["x"], current_events.events[0]["y"], current_events.events[0]["t"], int(current_events.events[0]["p"])*255)
     on_count, off_count = 0, 0
-    for i in tqdm(range(50000)):
-        if current_events.events[i]["p"]:
+    #print(time_surface.shape)
+    for i, e in tqdm(enumerate(current_events.events[1:])):
+        time_surface = update_time_surface(time_surface, ACCUMULATED_TIME, e["t"], e["x"], e["y"], e["p"], prev_time)
+        prev_time = e["t"]
+        prev_state, prev_state_inv = time_surface[e["y"]][e["x"]][int(e["p"])], time_surface[e["y"]][e["x"]][int(not e["p"])]
+        isEFast, isArcStar = isCornerEFast(time_surface[:, :, int(e["p"])], e["x"], e["y"], e["p"]), isCornerArcStar(time_surface[:, :, int(e["p"])], prev_state, prev_state_inv, e["x"], e["y"], e["p"])
+
+        if isEFast:
+            eFastQueue.append((e["x"], e["y"], e["t"], int(e["p"])*255))
+        if isArcStar:
+            ArcStarQueue.append((e["x"], e["y"], e["t"], int(e["p"])*255))
+
+        if e["p"]:
             on_count += 1
         else:
             off_count += 1
-        features.append((current_events.events[i]["x"], current_events.events[i]["y"], int(current_events.events[i]["p"])*255))
-    drawFeatureTrack3D(features, "", 33000)
-    drawFeatureTrack2D(features, "", 33000)
+        features[i] = (e["x"], e["y"], e["t"], int(e["p"])*255)
+    
+    # Draw All Events Feature Track
+    drawFeatureTrack3D(features, "Shapes Translation All Events Feature Track", ACCUMULATED_TIME)
+    drawFeatureTrack2D(features, "Shapes Translation All Events Feature Track", ACCUMULATED_TIME)
     print("Number of On event in this feature track: " + str(on_count))
     print("Number of Off event in this feature track: " + str(off_count))
     print("---------------------------------------------------------------")
 
-    # generate frames based on accumulated time
-    sliced = time_window_slice(current_events, time_window=33000)
-    frames = accumulate_and_generate(sliced, WIDTH, HEIGHT)
+    # Draw All Corner's Feature Track
+    drawFeatureTrack3D(eFastQueue, "Shapes Translation All eFast Corner in File", ACCUMULATED_TIME)
+    drawFeatureTrack2D(eFastQueue, "Shapes Translation All eFast Corner in File", ACCUMULATED_TIME)
+    drawFeatureTrack3D(ArcStarQueue, "Shapes Translation All ArcStar Corner in File", ACCUMULATED_TIME)
+    drawFeatureTrack2D(ArcStarQueue, "Shapes Translation All ArcStar Corner in File", ACCUMULATED_TIME)
+    print("Number of eFast Corners in this feature track: " + str(len(eFastQueue)))
+    print("Number of ArcStar Corners in this feature track: " + str(len(ArcStarQueue)))
+
     print("---------------------------------------------------------------")
 
+    # generate frames based on accumulated time
+    #sliced = time_window_slice(current_events, time_window=33000)
+    #frames = accumulate_and_generate(sliced, WIDTH, HEIGHT)
+    #print("---------------------------------------------------------------")
+
     # add a dummy channel to the frame so it can be displayed with OpenCV
-    frames = addChannel(frames)
-    print("---------------------------------------------------------------")
+    #frames = addChannel(frames)
+    #print("---------------------------------------------------------------")
 
     # Display the resulting frames as a video
     #display_video(frames)
-    save_video(frames, "filtered")
+    #save_video(frames, "filtered")
 
 if __name__ == "__main__":
     main()
