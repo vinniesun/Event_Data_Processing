@@ -1,0 +1,5 @@
+make main --dry-run --keep-going --print-directory
+make: Entering directory `/Users/vincent/Desktop/CityUHK/Event_Process/EBBINNOT/Codes/C++/Corner_V2'
+make: `main' is up to date.
+make: Leaving directory `/Users/vincent/Desktop/CityUHK/Event_Process/EBBINNOT/Codes/C++/Corner_V2'
+ 

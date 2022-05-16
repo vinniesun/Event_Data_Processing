@@ -67,11 +67,12 @@ def process_text_file(filename: str) -> Events:
     return events
 
 def main():
-    #filename = "/Users/vincent/Desktop/CityUHK/Event_Camera_Dataset/shapes_rotation/events.txt"
-    filename = "/Users/vincent/Desktop/CityUHK/Event_Camera_Dataset/shapes_translation/events.txt"
-    #filename = "/Users/vincent/Desktop/CityUHK/Event_Camera_Dataset/shapes_6dof/events.txt"
-    #filename = "/Users/vincent/Desktop/CityUHK/Event_Camera_Dataset/poster_rotation/events.txt"
+    #filename = "/Users/vincent/Desktop/CityUHK/Event_Process/Event_Camera_Dataset/shapes_rotation/events.txt"
+    filename = "/Users/vincent/Desktop/CityUHK/Event_Process/Event_Camera_Dataset/shapes_translation/events.txt"
+    #filename = "/Users/vincent/Desktop/CityUHK/Event_Process/Event_Camera_Dataset/shapes_6dof/events.txt"
+    #filename = "/Users/vincent/Desktop/CityUHK/Event_Process/Event_Camera_Dataset/poster_rotation/events.txt"
 
+    """
     eFast_csv_file = "../Output/eFast_Result.csv"
     ArcStar_csv_file = "../Output/ArcStar_Result.csv"
 
@@ -85,7 +86,7 @@ def main():
         writer.writerow(["x", "y", "t", "p"])
     print("ArcStar Result File Created")
     print("---------------------------------------------------------------")
-
+    """
     # Read the event text file and generate our stream of events
     current_events = process_text_file(filename)
     print("Total Number of Events extracted: " + str(current_events.num_events))
@@ -101,6 +102,7 @@ def main():
     print("Total Number of Events After Nearest Neighbourhood Filtering: " + str(current_events.num_events))
     print("---------------------------------------------------------------")    
 
+    """
     # Find all Corners & All Events Feature Track
     # Generate Time Surface
     start_event_number = 200000
@@ -226,19 +228,19 @@ def main():
     plt.savefig("../Output/" + str(5000) + "us 2D binary ArcStar Only, Corners detected - " + str(len(ArcStarQueue)) + ".jpg", dpi=300)
     plt.show()
     plt.close(fig)
-
+    """
     # generate frames based on accumulated time
-    #sliced = time_window_slice(current_events, time_window=33000)
-    #frames = accumulate_and_generate(sliced, WIDTH, HEIGHT)
-    #print("---------------------------------------------------------------")
+    sliced = time_window_slice(current_events, time_window=33000)
+    frames = accumulate_and_generate(sliced, WIDTH, HEIGHT)
+    print("---------------------------------------------------------------")
 
     # add a dummy channel to the frame so it can be displayed with OpenCV
-    #frames = addChannel(frames)
-    #print("---------------------------------------------------------------")
+    frames = addChannel(frames)
+    print("---------------------------------------------------------------")
 
     # Display the resulting frames as a video
     #display_video(frames)
-    #save_video(frames, "filtered")
+    save_video(frames, "filtered")
 
 if __name__ == "__main__":
     main()

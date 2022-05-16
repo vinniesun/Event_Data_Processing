@@ -10,7 +10,7 @@ import math
 EFAST_FILE = "eFast_Result.csv"
 ARCSTAR_FILE = "ArcStar_Result.csv"
 
-GROUND_TRUTH = "/Users/vincent/Desktop/CityUHK/EBBINNOT/Output/Shapes_Rotation_Absolute/"
+GROUND_TRUTH = "/Users/vincent/Desktop/CityUHK/Event_Process/EBBINNOT/Output/Shapes_Rotation_Absolute/"
 LOCATION = "/Users/vincent/Desktop/CityUHK/EBBINNOT/Output/"
 PROCESS = ["Shapes_Rotation_Bits_12/", "Shapes_Rotation_Bits_16/", "Shapes_Rotation_Bits_18/", "Shapes_Rotation_Bits_20/",
             "Shapes_Rotation_Bits_24/", "Shapes_Rotation_Delta_33000/", "Shapes_Rotation_Delta_66000/"]
