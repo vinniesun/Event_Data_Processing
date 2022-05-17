@@ -3,7 +3,6 @@ import os
 from src.efast import *
 from src.arcstar import *
 from src.util import *
-from src.harris_detector import *
 from src.plot_tools import *
 from src.process_events import *
 

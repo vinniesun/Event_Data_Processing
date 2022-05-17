@@ -10,7 +10,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 make: *** No rule to make target `all'.  Stop.
 
 
-# Make data base, printed on Thu May 12 17:45:09 2022
+# Make data base, printed on Mon May 16 12:00:17 2022
 
 # Variables
 
@@ -51,7 +51,7 @@ CXXFLAGS_o = -std=c++11 -w -O2 $(INCLUDES)
 # environment
 __CFBundleIdentifier = com.microsoft.VSCode
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /var/folders/k3/xjz4qnts12g5v03mpmslsjy80000gn/T/vscode-ipc-a8cfa7ad-f3e1-417c-82c6-3eff7c3717c3.sock
+VSCODE_IPC_HOOK_EXTHOST = /var/folders/k3/xjz4qnts12g5v03mpmslsjy80000gn/T/vscode-ipc-eb89665c-f7de-4934-a47e-ee9fea159e86.sock
 # environment
 VSCODE_CWD = /
 # environment
@@ -65,7 +65,6 @@ VSCODE_LOG_STACK = false
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # makefile (from `Makefile', line 6)
- 
 LDFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_videoio -lopencv_photo 
 # default
 .FEATURES := target-specific order-only second-expansion else-if archives jobserver check-symlink
@@ -166,7 +165,6 @@ LANG = C
 # environment
 VSCODE_PID = 856
 # variable set hash-table stats:
- 
 # Load=75/1024=7%, Rehash=0, Collisions=5/103=5%
 
 # Pattern-specific Variable Values
@@ -175,9 +173,9 @@ VSCODE_PID = 856
 
 # Directories
 
-# . (device 16777220, inode 8631883297): 43 files, no impossibilities.
+# . (device 16777220, inode 8631883297): 25 files, no impossibilities.
 
-# 43 files, no impossibilities in 1 directories.
+# 25 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -297,8 +295,9 @@ main.o:
 # # of strings in strcache: 1
 # # of strcache buffers: 1
 # strcache size: total = 4096 / max = 4096 / min = 4096 / avg = 4096
+ 
 # strcache free: total = 4087 / max = 4087 / min = 4087 / avg = 4087
 
-# Finished Make data base on Thu May 12 17:45:09 2022
+# Finished Make data base on Mon May 16 12:00:17 2022
 
  

@@ -175,32 +175,66 @@ def generate_time_surface(event_array: Events, time_threshold: int, event_start:
 """
     Update the time surface 
 """
-def update_time_surface(time_surface: np.array, t, x, y, p, time_threshold: int=5000, prev_time=0, bits=1, mode: str="absolute"):
+def update_time_surface(time_surface: np.array, t: int, x: int, y: int, p: int, deltaMax: int=5000, quant: int=2, prev_time: int=0, ktos: int=3, ttos: int=7, maxX: int=3, maxY: int=3, mode: str="timestamp"):
     try:
-        if mode == "absolute":
+        if mode == "timestamp":
             time_surface[y][x][int(p)] = t
         elif mode == "delta":
             deltaT = t - prev_time
 
             time_surface[:, :, int(p)] -= deltaT
-            time_surface[y][x][int(p)] = time_threshold
+            time_surface[y][x][int(p)] = deltaMax
             mask = np.where(time_surface < 0)
 
             time_surface[mask] = 0
-        elif mode == "bits":
-            maxVal = 2 ** bits
+        elif mode == "factor":
+            time_surface[y][x][int(p)] = int(t/quant)
+        elif mode == "delta_factor":
             deltaT = t - prev_time
 
-            time_surface[:, :, int(p)] -= deltaT
-            time_surface[y][x][int(p)] = maxVal
-            
+            time_surface[:, :, int(p)] -= ((deltaT/4)*4)
+            time_surface[y][x][int(p)] = (deltaMax*4)
             mask = np.where(time_surface < 0)
+
             time_surface[mask] = 0
+        # TOS is 2D. Instead of using two channels to represent on events and off events, we'll be combining both type of events into a single TOS
+        elif mode == "TOS": 
+            if (not(x < ktos or x >= maxX - ktos or y < ktos or y >= maxY - ktos)):
+                for i in range(x-ktos, x+ktos+1):
+                    for j in range(y-ktos, y+ktos+1):
+                        if time_surface[j][i] > (255 - ttos):
+                            time_surface[j][i] -= 1
+                        else:
+                            time_surface[j][i] = 0
+            
+            time_surface[y][x] = 255
 
         return time_surface
 
     except ValueError:
-        print("Wrong Mode. Got " + mode + " as the mode, expected absolute, delta or bits")
+        print("Wrong Mode. Got " + mode + " as the mode, expected timestamp, delta, factor, delta_factor or TOS")
+
+"""
+    This is the helper method used to load the Event data saved as text file from the following site:
+    https://rpg.ifi.uzh.ch/davis_data.html
+
+    The data is read and loaded into an Events object
+"""
+def process_text_file(filename: str) -> Events:
+    with open(filename, 'r') as f:
+        num_events = 0
+        for _ in f:
+            num_events += 1
+    
+    events = Events(num_events, WIDTH, HEIGHT)
+
+    with open(filename, 'r') as f:
+        for i, line in enumerate(tqdm(f)):
+            event = line.split(" ")
+            assert len(event) == 4, "the line should contain only four elements: t, x, y, p"
+            events.events[i]["t"], events.events[i]["x"], events.events[i]["y"], events.events[i]["p"] = int(float(event[0]) * 10e6), int(event[1]), int(event[2]), bool(event[3])
+            
+    return events
 
 """
     This method reads in events stored as an AEDAT4 file
