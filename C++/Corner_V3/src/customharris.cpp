@@ -2,7 +2,6 @@
 #include "customharris.hpp"
 #include "luvharris.hpp"
 #include <fstream>
-#include <thread>
 #include <chrono>
 
 void print(cv::Mat &matrix) {
@@ -11,7 +10,7 @@ void print(cv::Mat &matrix) {
     std::cout << matrix << std::endl;
     std::cout << "----------------------------------------" << std::endl;
 }
-
+/*
 int main() {
     cv::Mat input_img = cv::imread("1kjl.jpg", cv::IMREAD_GRAYSCALE);
     cv::Mat input_img_rgb = cv::imread("1kjl.jpg", cv::IMREAD_COLOR);
@@ -129,3 +128,4 @@ int main() {
 
     // return 0;
 }
+*/
