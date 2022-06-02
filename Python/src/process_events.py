@@ -272,7 +272,7 @@ def process_text_file(filename: str) -> Events:
         for i, line in enumerate(tqdm(f)):
             event = line.split(" ")
             assert len(event) == 4, "the line should contain only four elements: t, x, y, p"
-            events.events[i]["t"], events.events[i]["x"], events.events[i]["y"], events.events[i]["p"] = int(float(event[0]) * 10e6), int(event[1]), int(event[2]), bool(event[3])
+            events.events[i]["t"], events.events[i]["x"], events.events[i]["y"], events.events[i]["p"] = int(float(event[0]) * 1e6), int(event[1]), int(event[2]), bool(event[3])
             
     return events
 

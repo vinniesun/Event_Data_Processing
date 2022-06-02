@@ -6,11 +6,8 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # PARTICULAR PURPOSE.
 
 # This program built for i386-apple-darwin11.3.0
- 
-make: *** No rule to make target `all'.  Stop.
 
-
-# Make data base, printed on Thu Jun  2 16:22:53 2022
+# Make data base, printed on Thu Jun  2 16:23:12 2022
 
 # Variables
 
@@ -18,8 +15,10 @@ make: *** No rule to make target `all'.  Stop.
 <D = $(patsubst %/,%,$(dir $<))
 # automatic
 ?F = $(notdir $?)
-# makefile (from `Makefile', line 16)
+# makefile (from `Makefile', line 19)
 OBJ = efast.o arcstar.o luvharris.o process.o customharris.o main.o 
+# makefile (from `Makefile', line 14)
+SRC = ./src/
 # environment
 VSCODE_LOG_NATIVE = false
 # makefile (from `Makefile', line 3)
@@ -27,13 +26,13 @@ TARGET = main
 # automatic
 ?D = $(patsubst %/,%,$(dir $?))
 # makefile (from `Makefile', line 5)
-INCLUDES = -I/usr/local/Cellar/eigen/3.4.0_1/include/eigen3/ -I/usr/local/Cellar/opencv/4.5.5_1/include/opencv4/
+INCLUDES = -I/usr/local/Cellar/eigen/3.4.0_1/include/eigen3/ -I/usr/local/Cellar/opencv/4.5.5_1/include/opencv4/ -I include
 # automatic
 @D = $(patsubst %/,%,$(dir $@))
 # automatic
 @F = $(notdir $@)
 # makefile
-CURDIR := /Users/vincent/Desktop/CityUHK/Event_Process/EBBINNOT/Codes/C++/Corner_V2
+CURDIR := /Users/vincent/Desktop/CityUHK/Event_Process/EBBINNOT/Codes/C++/Corner_V3
 # makefile
 SHELL = /bin/sh
 # environment
@@ -51,7 +50,7 @@ CXXFLAGS_o = -std=c++11 -w -O2 $(INCLUDES)
 # environment
 __CFBundleIdentifier = com.microsoft.VSCode
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /var/folders/k3/xjz4qnts12g5v03mpmslsjy80000gn/T/vscode-ipc-bd6ce3c7-a8e3-48eb-a0d5-f49d7443be91.sock
+VSCODE_IPC_HOOK_EXTHOST = /var/folders/k3/xjz4qnts12g5v03mpmslsjy80000gn/T/vscode-ipc-eea6a1e5-0d55-4327-b747-c23b47e40fa7.sock
 # environment
 VSCODE_CWD = /
 # environment
@@ -77,9 +76,11 @@ DISPLAY = /private/tmp/com.apple.launchd.BNliqmBGKo/org.xquartz:0
 # environment
 VSCODE_PIPE_LOGGING = true
 # environment
-PWD = /Users/vincent/Desktop/CityUHK/Event_Process/EBBINNOT/Codes/C++/Corner_V2
+PWD = /Users/vincent/Desktop/CityUHK/Event_Process/EBBINNOT/Codes/C++/Corner_V3
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = undefined
+# makefile (from `Makefile', line 13)
+INC_DIR = ./include/
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # environment
@@ -150,8 +151,8 @@ CXX = g++
 LC_ALL = C
 # automatic
 ^F = $(notdir $^)
-# makefile (from `Makefile', line 14)
-DEPS = efast.hpp arcstar.hpp luvharris.hpp process.hpp customharris.hpp
+# makefile (from `Makefile', line 17)
+DEPS = $(INC_DIR)efast.hpp $(INC_DIR)arcstar.hpp $(INC_DIR)luvharris.hpp $(INC_DIR)process.hpp $(INC_DIR)customharris.hpp $(INC_DIR)progressbar.hpp
 # default
 SUFFIXES := 
 # default
@@ -163,7 +164,7 @@ LANG = C
 # environment
 VSCODE_PID = 99762
 # variable set hash-table stats:
-# Load=74/1024=7%, Rehash=0, Collisions=5/102=5%
+# Load=76/1024=7%, Rehash=0, Collisions=5/111=5%
 
 # Pattern-specific Variable Values
 
@@ -171,14 +172,14 @@ VSCODE_PID = 99762
 
 # Directories
 
-# . (device 16777220, inode 8631883297): 25 files, no impossibilities.
+# . (device 16777220, inode 8633126490): 16 files, no impossibilities.
 
-# 25 files, no impossibilities in 1 directories.
+# 16 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
-%.o: %.c efast.hpp arcstar.hpp luvharris.hpp process.hpp customharris.hpp
-#  commands to execute (from `Makefile', line 20):
+%.o: ./src/%.cpp ./include/efast.hpp ./include/arcstar.hpp ./include/luvharris.hpp ./include/process.hpp ./include/customharris.hpp ./include/progressbar.hpp
+#  commands to execute (from `Makefile', line 23):
 	$(CXX) $(CXXFLAGS_o) -c -o $@ $<
 	
 
@@ -233,7 +234,7 @@ process.o:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-12 17:44:57
+#  Last modified 2022-05-31 14:34:22
 #  File has been updated.
 #  Successfully updated.
 # variable set hash-table stats:
@@ -243,7 +244,7 @@ main_debug: efast.o arcstar.o luvharris.o process.o customharris.o main.o
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  commands to execute (from `Makefile', line 26):
+#  commands to execute (from `Makefile', line 29):
 	$(CXX) $(CXXFLAGS_DEBUG) -o $@ $^ $(LDFLAGS)
 	
 
@@ -264,7 +265,7 @@ clean:
 #  Implicit rule search has not been done.
 #  File does not exist.
 #  File has not been updated.
-#  commands to execute (from `Makefile', line 30):
+#  commands to execute (from `Makefile', line 33):
 	rm -f *.o
 	
 
@@ -272,7 +273,10 @@ main: efast.o arcstar.o luvharris.o process.o customharris.o main.o
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  commands to execute (from `Makefile', line 23):
+#  commands to execute (from `Makefile', line 26):
+ 
+make: *** No rule to make target `all'.  Stop.
+
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	
 
@@ -295,7 +299,6 @@ main.o:
 # strcache size: total = 4096 / max = 4096 / min = 4096 / avg = 4096
 # strcache free: total = 4087 / max = 4087 / min = 4087 / avg = 4087
 
- 
-# Finished Make data base on Thu Jun  2 16:22:53 2022
+# Finished Make data base on Thu Jun  2 16:23:12 2022
 
  

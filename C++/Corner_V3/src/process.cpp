@@ -10,7 +10,7 @@
 
 using namespace Eigen;
 
-static float multiplier = 10.0e6;
+static float multiplier = 1.0e6;
 
 Events::Events(int size) {
     t.reserve(size);

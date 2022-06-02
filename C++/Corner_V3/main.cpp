@@ -106,7 +106,7 @@ int main() {
     int thread_count = 0;
     std::atomic_bool work_status (true);
 
-    std::mutex mtx;
+    std::mutex mtx; // For locking instances to makesure nothing is writing to it by mistake
 
     //cv::VideoWriter video("patch_sae.avi", cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), 120, cv::Size(nn_event.width, nn_event.height), false);
     //cv::VideoWriter video("patch_event_trail.avi", cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), 120, cv::Size(nn_event.width, nn_event.height), true);
