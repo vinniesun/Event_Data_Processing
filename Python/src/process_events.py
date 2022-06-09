@@ -11,6 +11,9 @@ import dv
 WIDTH = 240
 HEIGHT = 180
 
+# WIDTH = 346
+# HEIGHT = 260
+
 class Events(object):
     def __init__(self, num_events: int, width: int, height: int) -> np.ndarray:
         # events contains the following index:
@@ -133,46 +136,6 @@ def time_window_slice(event_array: Events, time_window: int=33000, drop_incomple
     return [event_array.events[indices_start[i]:indices_end[i]] for i in range(num_slices)]
 
 """
-    ABMOF's Slice by Area Event Number
-    @param
-    k: threshold value (for number of events per slice)
-    a: subregion's sampling area
-"""
-def event_number_slice(event_array: Events, k: int=100, drop_incomplete: bool=True, a: int=5):
-    sub_height = event_array.height // (2**a)
-    sub_width = event_array.width // (2**a)
-    
-    frame_count = 0
-    start_index, end_index = [], []
-    total_row, total_col = event_array.height // sub_height + 1, event_array.width // sub_width + 1
-
-    total_area_count = total_row * total_col
-    area_counter = [0] * total_area_count
-
-    start_label = 1
-
-    for i, e in tqdm(enumerate(event_array.events)):
-        t, x, y, p = e["t"], e["x"], e["y"], e["p"]
-
-        x_index = x // sub_width
-        y_index = y // sub_height
-
-        area_index = x_index * total_col + y_index
-        area_counter[area_index] += 1
-
-        if start_label == 1:
-            start_index.append(i)
-            start_label = 0
-        
-        if max(area_counter) > k:
-            frame_count += 1
-            area_counter = [0 for x in area_counter]
-            end_index.append(i)
-            start_label = 1
-
-    return [event_array[start_index[i]:end_index[i]] for i in range(frame_count)]
-
-"""
     Generate the frames based on the number of slices from slice by time or slice by events
 """
 def accumulate_and_generate(sliced_event_array: list, width, height) -> np.ndarray:
@@ -247,7 +210,7 @@ def update_time_surface(time_surface: np.array, t: int, x: int, y: int, p: int, 
                         else:
                             time_surface[j][i] = 0
             
-            time_surface[y][x] = 255
+                time_surface[y][x] = 255
 
         return time_surface
 

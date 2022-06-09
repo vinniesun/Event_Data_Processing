@@ -12,7 +12,7 @@ void print(cv::Mat &matrix) {
     std::cout << "----------------------------------------" << std::endl;
 }
 
-int main() {
+/*int main() {
     cv::Mat input_img = cv::imread("1kjl.jpg", cv::IMREAD_GRAYSCALE);
     cv::Mat input_img_rgb = cv::imread("1kjl.jpg", cv::IMREAD_COLOR);
     cv::Mat output_img_rgb = input_img_rgb.clone();
@@ -128,4 +128,4 @@ int main() {
     // outfile.close();
 
     // return 0;
-}
+}*/

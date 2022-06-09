@@ -50,7 +50,7 @@ int main() {
 
     //std::cout << sae_1.size() << ", " << sae_1[0].size() << std::endl;
 
-    int prev_time = 0;
+    /*int prev_time = 0;
 
     int efast_corner = 0;
     int arcstar_corner = 0;
@@ -233,13 +233,13 @@ int main() {
         //}
         prev_time = t;
 
-        /*outfile.open("All_events.txt", std::ios_base::app);
-        if (!outfile) {
-            std::cout << "Failed to open All_events.txt" << std::endl;
-            return -1;
-        }
-        outfile << t << "," << x << "," << y << "," << pol << "\n";
-        outfile.close();*/
+        // outfile.open("All_events.txt", std::ios_base::app);
+        // if (!outfile) {
+        //     std::cout << "Failed to open All_events.txt" << std::endl;
+        //     return -1;
+        // }
+        // outfile << t << "," << x << "," << y << "," << pol << "\n";
+        // outfile.close();
     }
     // Finish Timing Here
     auto stop = std::chrono::high_resolution_clock::now();
@@ -258,7 +258,7 @@ int main() {
     std::cout << "Number of arcStar corner: " << arcstar_corner << std::endl;
     std::cout << "Number of luvHarris corner: " << luvharris_corner << std::endl;
     std::cout << "Number of patch luvHarris corner: " << patch_corner << std::endl;
-    std::cout << "Number of custom luvHarris corner: " << custom_corner << std::endl;
+    std::cout << "Number of custom luvHarris corner: " << custom_corner << std::endl;*/
 
     return 0;
 }
